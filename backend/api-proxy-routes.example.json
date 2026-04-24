@@ -1,0 +1,25 @@
+{
+  "routes": [
+    {
+      "listen_path": "/api/local/metrics/",
+      "plugin": "local-metrics"
+    },
+    {
+      "listen_path": "/api/external/metrics/",
+      "upstream_path": "/v1/metrics/",
+      "backends": [
+        "https://metrics-primary.example.com",
+        "https://metrics-secondary.example.com"
+      ]
+    },
+    {
+      "listen_path": "/api/external/maps/",
+      "upstream_path": "/api/maps/",
+      "backends": [
+        "https://maps-a.example.com",
+        "https://maps-b.example.com",
+        "https://maps-c.example.com"
+      ]
+    }
+  ]
+}
