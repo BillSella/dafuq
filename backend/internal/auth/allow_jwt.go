@@ -25,7 +25,7 @@ type AllowValidator struct {
 }
 
 // NewAllowValidator builds a validator for the "allow" auth plugin. Requires
-// [config.Config] fields set by DAFUQ_ALLOW_JWT_SECRET (optional) and DAFUQ_ALLOW_SUBJECT.
+// [config.Config] allow plugin fields: AllowJWTSecret and AllowSubject from the environment; AllowInsecureAuth from --insecure.
 func NewAllowValidator(cfg config.Config) (*AllowValidator, error) {
 	sec := strings.TrimSpace(cfg.AllowJWTSecret)
 	if sec == "" {

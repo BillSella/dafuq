@@ -98,7 +98,7 @@ func authDriverForRoute(r *APIProxyRoute) config.AuthDriver {
 	if len(r.Backends) > 0 {
 		return config.AuthProxyOrOIDC
 	}
-	// Unreachable for normalized routes, but default to in-process WorkOS.
+	// Normalized gateway auth routes always set plugin or backends; this is a safety fallback.
 	return config.AuthWorkOSPlugin
 }
 
@@ -212,7 +212,7 @@ func spaIndex(staticDir string) http.HandlerFunc {
 		}
 		index := filepath.Join(staticDir, "index.html")
 		if _, err := os.Stat(index); err != nil {
-			http.Error(w, "frontend not built: run npm run build and point DAFUQ_STATIC_DIR at dist/", http.StatusServiceUnavailable)
+			http.Error(w, "frontend not built: run npm run build and set --static-dir to dist/", http.StatusServiceUnavailable)
 			return
 		}
 		http.ServeFile(w, r, index)
@@ -235,7 +235,7 @@ func spaOrFile(staticDir string) http.HandlerFunc {
 		if err != nil || st.IsDir() {
 			index := filepath.Join(staticDir, "index.html")
 			if _, err := os.Stat(index); err != nil {
-				http.Error(w, "frontend not built: run npm run build and point DAFUQ_STATIC_DIR at dist/", http.StatusServiceUnavailable)
+				http.Error(w, "frontend not built: run npm run build and set --static-dir to dist/", http.StatusServiceUnavailable)
 				return
 			}
 			http.ServeFile(w, r, index)

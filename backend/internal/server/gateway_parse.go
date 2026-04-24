@@ -15,7 +15,7 @@ type gatewayFileRaw struct {
 
 func parseGatewayAuthMessage(raw json.RawMessage) (*APIProxyRoute, error) {
 	if isJSONEmptyOrNull(raw) {
-		return defaultAuthRoute(), nil
+		return nil, fmt.Errorf("auth block is null or empty")
 	}
 	return parseRouteObject(raw)
 }

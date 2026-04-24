@@ -9,14 +9,18 @@ import (
 	"time"
 )
 
-// Config holds server and WorkOS settings loaded from the environment.
+// Config holds server and WorkOS settings. Listen address, static dir, TLS, gateway JSON,
+// dashboard data dir, and cookie-secure are set in cmd/server from command-line flags;
+// the rest is mainly from the environment.
 type Config struct {
-	Addr               string
-	TLSCertFile        string
-	TLSKeyFile         string
-	StaticDir          string
-	DashboardDataDir   string
-	BackendAPIBaseURL  string
+	// Addr, StaticDir, TLSCertFile, TLSKeyFile, APIProxyConfigFile, DashboardDataDir, CookieSecureOverride: cmd/server flags.
+	Addr              string
+	TLSCertFile       string
+	TLSKeyFile        string
+	StaticDir         string
+	DashboardDataDir  string
+	BackendAPIBaseURL string
+	// APIProxyConfigFile: gateway JSON path, set in cmd/server from -c / --conf only.
 	APIProxyConfigFile string
 	WorkOSAPIKey       string
 	WorkOSClientID     string
@@ -27,7 +31,7 @@ type Config struct {
 	JWKSURL     string
 	JWTIssuer   string
 	JWTAudience string
-	// Dev "allow" auth plugin (see DAFUQ_ALLOW_INSECURE_AUTH) — not for production.
+	// AllowInsecureAuth is set from the --insecure CLI flag when the allow auth plugin is used (never in production).
 	AllowInsecureAuth bool
 	AllowJWTSecret    string
 	AllowSubject      string
@@ -43,10 +47,31 @@ type Config struct {
 	ShutdownTimeout   time.Duration
 	// Max body read for gateway HTTP proxy routes (0 = [DefaultProxyMaxBodyBytes]).
 	ProxyMaxBodyBytes int64
+	// If non-nil, used by CookieSecure(); if nil, Secure matches TLS. Set from --cookie-secure in cmd/server.
+	CookieSecureOverride *bool
 }
 
 // DefaultProxyMaxBodyBytes is the cap on request bodies forwarded to upstream proxy backends.
 const DefaultProxyMaxBodyBytes = 10 << 20
+
+// DefaultStaticDir is the default for --static-dir (built SPA, relative to the process cwd).
+const DefaultStaticDir = "../dist"
+
+// DefaultDashboardDataDir is the default for --dashboard-data-dir.
+const DefaultDashboardDataDir = "data/dashboards"
+
+// ApplyDefaultListenAddress sets cfg.Addr to :8080, or :8443 when both TLS cert and key
+// are set, when cfg.Addr is empty (e.g. --addr not passed).
+func ApplyDefaultListenAddress(cfg *Config) {
+	if strings.TrimSpace(cfg.Addr) != "" {
+		return
+	}
+	if cfg.TLSCertFile != "" && cfg.TLSKeyFile != "" {
+		cfg.Addr = ":8443"
+	} else {
+		cfg.Addr = ":8080"
+	}
+}
 
 func getenv(key, def string) string {
 	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
@@ -55,44 +80,26 @@ func getenv(key, def string) string {
 	return def
 }
 
-func envTruthy(key string) bool {
-	v := strings.TrimSpace(strings.ToLower(os.Getenv(key)))
-	return v == "1" || v == "true" || v == "yes" || v == "on"
-}
-
 // Load reads configuration from environment variables.
 func Load() (Config, error) {
 	cfg := Config{
-		Addr:               getenv("DAFUQ_ADDR", ""),
-		TLSCertFile:        getenv("DAFUQ_TLS_CERT_FILE", ""),
-		TLSKeyFile:         getenv("DAFUQ_TLS_KEY_FILE", ""),
-		StaticDir:          getenv("DAFUQ_STATIC_DIR", "../dist"),
-		DashboardDataDir:   getenv("DAFUQ_DASHBOARD_DATA_DIR", "data/dashboards"),
-		BackendAPIBaseURL:  strings.TrimRight(strings.TrimSpace(os.Getenv("DAFUQ_BACKEND_API_BASE_URL")), "/"),
-		APIProxyConfigFile: strings.TrimSpace(os.Getenv("DAFUQ_API_PROXY_CONFIG_FILE")),
-		WorkOSAPIKey:       strings.TrimSpace(os.Getenv("WORKOS_API_KEY")),
-		WorkOSClientID:     strings.TrimSpace(os.Getenv("WORKOS_CLIENT_ID")),
-		AuthRedirectURI:    strings.TrimSpace(os.Getenv("WORKOS_REDIRECT_URI")),
-		PostLoginRedirect:  getenv("DAFUQ_POST_LOGIN_REDIRECT", "/"),
-		WorkOSJWTIssuer:    strings.TrimSpace(os.Getenv("DAFUQ_WORKOS_JWT_ISSUER")),
-		JWKSURL:            strings.TrimSpace(os.Getenv("DAFUQ_JWKS_URL")),
-		JWTIssuer:          strings.TrimSpace(os.Getenv("DAFUQ_JWT_ISSUER")),
-		JWTAudience:        strings.TrimSpace(os.Getenv("DAFUQ_JWT_AUDIENCE")),
-		AllowInsecureAuth:  envTruthy("DAFUQ_ALLOW_INSECURE_AUTH"),
-		AllowJWTSecret:     getenv("DAFUQ_ALLOW_JWT_SECRET", "dafuq-insecure-allow-jwt-key-change-in-production"),
-		AllowSubject:       strings.TrimSpace(os.Getenv("DAFUQ_ALLOW_SUBJECT")),
-		PAMJWTSecret:       strings.TrimSpace(os.Getenv("DAFUQ_PAM_JWT_SECRET")),
-		PAMService:         strings.TrimSpace(os.Getenv("DAFUQ_PAM_SERVICE")),
+		BackendAPIBaseURL: strings.TrimRight(strings.TrimSpace(os.Getenv("DAFUQ_BACKEND_API_BASE_URL")), "/"),
+		WorkOSAPIKey:      strings.TrimSpace(os.Getenv("WORKOS_API_KEY")),
+		WorkOSClientID:    strings.TrimSpace(os.Getenv("WORKOS_CLIENT_ID")),
+		AuthRedirectURI:   strings.TrimSpace(os.Getenv("WORKOS_REDIRECT_URI")),
+		PostLoginRedirect: getenv("DAFUQ_POST_LOGIN_REDIRECT", "/"),
+		WorkOSJWTIssuer:   strings.TrimSpace(os.Getenv("DAFUQ_WORKOS_JWT_ISSUER")),
+		JWKSURL:           strings.TrimSpace(os.Getenv("DAFUQ_JWKS_URL")),
+		JWTIssuer:         strings.TrimSpace(os.Getenv("DAFUQ_JWT_ISSUER")),
+		JWTAudience:       strings.TrimSpace(os.Getenv("DAFUQ_JWT_AUDIENCE")),
+		AllowInsecureAuth: false,
+		AllowJWTSecret:    getenv("DAFUQ_ALLOW_JWT_SECRET", "dafuq-insecure-allow-jwt-key-change-in-production"),
+		AllowSubject:      strings.TrimSpace(os.Getenv("DAFUQ_ALLOW_SUBJECT")),
+		PAMJWTSecret:      strings.TrimSpace(os.Getenv("DAFUQ_PAM_JWT_SECRET")),
+		PAMService:        strings.TrimSpace(os.Getenv("DAFUQ_PAM_SERVICE")),
 	}
 	if strings.TrimSpace(cfg.AllowSubject) == "" {
 		cfg.AllowSubject = "test-user"
-	}
-	if cfg.Addr == "" {
-		if cfg.TLSCertFile != "" && cfg.TLSKeyFile != "" {
-			cfg.Addr = ":8443"
-		} else {
-			cfg.Addr = ":8080"
-		}
 	}
 	var err error
 	cfg.ReadHeaderTimeout, err = parseDurationEnv("DAFUQ_HTTP_READ_HEADER_TIMEOUT", 10*time.Second)
@@ -185,7 +192,7 @@ func (c Config) ValidateForAuth(d AuthDriver) error {
 	}
 	if d == AuthAllowPlugin {
 		if !c.AllowInsecureAuth {
-			return fmt.Errorf("auth plugin allow requires DAFUQ_ALLOW_INSECURE_AUTH=true (testing only, never in production with real data)")
+			return fmt.Errorf("auth plugin allow requires passing --insecure (testing only; never in production with real data)")
 		}
 		if strings.TrimSpace(c.AllowJWTSecret) == "" {
 			return fmt.Errorf("DAFUQ_ALLOW_JWT_SECRET is required for auth plugin allow")
@@ -218,13 +225,10 @@ func (c Config) UseTLS() bool {
 	return c.TLSCertFile != "" && c.TLSKeyFile != ""
 }
 
-// CookieSecure matches typical production HTTPS; can be overridden for local HTTP.
+// CookieSecure is true for Set-Cookie "Secure" when using HTTPS, unless --cookie-secure overrides.
 func (c Config) CookieSecure() bool {
-	if v := strings.ToLower(strings.TrimSpace(os.Getenv("DAFUQ_COOKIE_SECURE"))); v != "" {
-		b, err := strconv.ParseBool(v)
-		if err == nil {
-			return b
-		}
+	if c.CookieSecureOverride != nil {
+		return *c.CookieSecureOverride
 	}
 	return c.UseTLS()
 }

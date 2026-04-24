@@ -2,9 +2,11 @@
 //
 // # Gateway and plugins
 //
-// JSON in DAFUQ_API_PROXY_CONFIG_FILE defines "listen" paths with either
+// The gateway JSON file path is set with -c / --conf (default /etc/dafuq/dafuq.json
+// if the flag is omitted). The file must include top-level
+// "auth" plus optional "routes". Each route sets "listen" with either
 // "plugin": { "local": "<id>" } or "plugin": { "proxy": [ "https://.../path", ... ] }.
-// For auth, "local" can be "workos", "allow" (dev: DAFUQ_ALLOW_INSECURE_AUTH), "pam" (Linux PAM: DAFUQ_PAM_JWT_SECRET), or an external BFF via "proxy".
+// For auth, "local" can be "workos", "allow" (use --insecure; dev only), "pam" (Linux PAM: DAFUQ_PAM_JWT_SECRET), or an external BFF via "proxy".
 //
 // To add a local in-process plugin:
 //  1. Implement [Plugin] (name + [http.Handler] for routes under the listen prefix).

@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -13,16 +14,16 @@ import (
 	"github.com/dafuq-framework/dafuq/backend/internal/config"
 )
 
-func TestLoadGatewayConfigEmptyPathUsesDefaultWorkOS(t *testing.T) {
-	auth, routes, err := LoadGatewayConfig("")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(routes) != 0 {
-		t.Fatalf("expected no data routes, got %d", len(routes))
-	}
-	if !strings.EqualFold(auth.Plugin, "workos") || auth.ListenPath != "/api/auth/" {
-		t.Fatalf("unexpected default auth: %#v", auth)
+// WorkOS in-process auth block for tests that only exercise data routes.
+var testWorkOSAuthBlock = map[string]any{
+	"listen": "/api/auth",
+	"plugin": map[string]any{"local": "workos"},
+}
+
+func TestLoadGatewayConfigEmptyPathRequiresFile(t *testing.T) {
+	_, _, err := LoadGatewayConfig("")
+	if !errors.Is(err, ErrAPIProxyConfigPathRequired) {
+		t.Fatalf("expected ErrAPIProxyConfigPathRequired, got %v", err)
 	}
 }
 
@@ -30,6 +31,7 @@ func TestLoadGatewayConfigListenFieldAliasesEndpoint(t *testing.T) {
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "routes.json")
 	b, _ := json.Marshal(map[string]any{
+		"auth": testWorkOSAuthBlock,
 		"routes": []map[string]any{
 			{
 				"endpoint": "/api/legacy-endpoint",
@@ -53,6 +55,7 @@ func TestLoadGatewayConfigRoutesV2(t *testing.T) {
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "routes.json")
 	b, _ := json.Marshal(map[string]any{
+		"auth": testWorkOSAuthBlock,
 		"routes": []map[string]any{
 			{
 				"listen": "/api/ext",
@@ -90,6 +93,7 @@ func TestLoadGatewayConfigRoutesLegacy(t *testing.T) {
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "routes.json")
 	b, _ := json.Marshal(map[string]any{
+		"auth": testWorkOSAuthBlock,
 		"routes": []map[string]any{
 			{
 				"listen_path": "/api/ext",
@@ -113,6 +117,7 @@ func TestLoadGatewayConfigWithPluginV2(t *testing.T) {
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "routes.json")
 	b, _ := json.Marshal(map[string]any{
+		"auth": testWorkOSAuthBlock,
 		"routes": []map[string]any{
 			{
 				"listen": "/api/local/metrics",
@@ -144,6 +149,7 @@ func TestLoadGatewayConfigPluginStringLegacy(t *testing.T) {
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "routes.json")
 	b, _ := json.Marshal(map[string]any{
+		"auth": testWorkOSAuthBlock,
 		"routes": []map[string]any{
 			{
 				"listen_path": "/api/local/metrics",
@@ -174,6 +180,34 @@ func TestLoadGatewayFileExample(t *testing.T) {
 	}
 	if len(routes) != 3 {
 		t.Fatalf("expected 3 data routes, got %d", len(routes))
+	}
+}
+
+func TestLoadGatewayConfigMissingAuthKey(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "routes.json")
+	b, _ := json.Marshal(map[string]any{
+		"routes": []map[string]any{},
+	})
+	if err := os.WriteFile(path, b, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, _, err := LoadGatewayConfig(path)
+	if err == nil {
+		t.Fatal("expected error for missing auth")
+	}
+}
+
+func TestLoadGatewayConfigAuthNull(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "routes.json")
+	b := []byte(`{"auth":null,"routes":[]}`)
+	if err := os.WriteFile(path, b, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, _, err := LoadGatewayConfig(path)
+	if err == nil {
+		t.Fatal("expected error for auth: null")
 	}
 }
 
