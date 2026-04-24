@@ -61,3 +61,15 @@ func (v *JWTValidator) Validate(ctx context.Context, raw string) (*WorkOSAccessC
 	}
 	return c, nil
 }
+
+// ValidateAccessToken implements TokenValidator for WorkOS-issued access tokens.
+func (v *JWTValidator) ValidateAccessToken(ctx context.Context, raw string) (*AccessContextClaims, error) {
+	c, err := v.Validate(ctx, raw)
+	if err != nil {
+		return nil, err
+	}
+	if c.Subject == "" {
+		return nil, errors.New("missing sub")
+	}
+	return &AccessContextClaims{Subject: c.Subject, ClientID: c.ClientID, SID: c.SID}, nil
+}

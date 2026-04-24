@@ -1,25 +1,42 @@
 {
+  "auth": {
+    "listen": "/api/auth",
+
+    "plugin": {
+      "local": "workos"
+    }
+  },
+
   "routes": [
     {
-      "listen_path": "/api/local/metrics/",
-      "plugin": "local-metrics"
+      "listen": "/api/local/metrics/",
+
+      "plugin": {
+        "local": "local-metrics"
+      }
     },
+
     {
-      "listen_path": "/api/external/metrics/",
-      "upstream_path": "/v1/metrics/",
-      "backends": [
-        "https://metrics-primary.example.com",
-        "https://metrics-secondary.example.com"
-      ]
+      "listen": "/api/external/metrics/",
+
+      "plugin": {
+        "proxy": [
+          "https://metrics-primary.example.com/v1/metrics",
+          "https://metrics-secondary.example.com/v1/metrics"
+        ]
+      }
     },
+
     {
-      "listen_path": "/api/external/maps/",
-      "upstream_path": "/api/maps/",
-      "backends": [
-        "https://maps-a.example.com",
-        "https://maps-b.example.com",
-        "https://maps-c.example.com"
-      ]
+      "listen": "/api/external/maps/",
+
+      "plugin": {
+        "proxy": [
+          "https://maps-a.example.com/api/maps",
+          "https://maps-b.example.com/api/maps",
+          "https://maps-c.example.com/api/maps"
+        ]
+      }
     }
   ]
 }

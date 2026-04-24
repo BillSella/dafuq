@@ -29,12 +29,12 @@ const passwordRateLimit = 10
 type Handler struct {
 	cfg       config.Config
 	client    *usermanagement.Client
-	validator *JWTValidator
+	validator TokenValidator
 	limiterMu sync.Mutex
 	attempts  map[string][]time.Time
 }
 
-func NewHandler(cfg config.Config, client *usermanagement.Client, v *JWTValidator) *Handler {
+func NewHandler(cfg config.Config, client *usermanagement.Client, v TokenValidator) *Handler {
 	return &Handler{
 		cfg:       cfg,
 		client:    client,
@@ -157,34 +157,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) postLoginRedirectURL(r *http.Request) (*url.URL, error) {
-	raw := strings.TrimSpace(h.cfg.PostLoginRedirect)
-	if raw == "" {
-		raw = "/"
-	}
-	if strings.HasPrefix(raw, "http://") || strings.HasPrefix(raw, "https://") {
-		return url.Parse(raw)
-	}
-	rel, err := url.Parse(raw)
-	if err != nil {
-		return nil, err
-	}
-	if rel.Scheme != "" {
-		return rel, nil
-	}
-	scheme := "http"
-	if r.TLS != nil {
-		scheme = "https"
-	}
-	if p := r.Header.Get("X-Forwarded-Proto"); p != "" {
-		scheme = p
-	}
-	return &url.URL{
-		Scheme:   scheme,
-		Host:     r.Host,
-		Path:     rel.Path,
-		RawPath:  rel.RawPath,
-		RawQuery: rel.RawQuery,
-	}, nil
+	return PostLoginRedirectURL(h.cfg, r)
 }
 
 type passwordBody struct {
@@ -334,20 +307,29 @@ func (h *Handler) validateOAuthState(r *http.Request) error {
 	return nil
 }
 
-// Me returns the WorkOS user profile when a valid access token JWT is supplied.
+// Me returns the user profile when a valid access token is supplied.
+// When WorkOS User Management is configured, it returns the full WorkOS user.
+// For proxied / OIDC-only mode (no user API), it returns a minimal subject-only payload.
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	raw, ok := bearerToken(r)
 	if !ok {
 		writeJSON(w, http.StatusUnauthorized, map[string]any{"authenticated": false})
 		return
 	}
-	claims, err := h.validator.Validate(r.Context(), raw)
+	claims, err := h.validator.ValidateAccessToken(r.Context(), raw)
 	if err != nil {
 		writeJSON(w, http.StatusUnauthorized, map[string]any{"authenticated": false})
 		return
 	}
 	if claims.Subject == "" {
 		http.Error(w, "invalid token subject", http.StatusUnauthorized)
+		return
+	}
+	if h.client == nil {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"authenticated": true,
+			"subject":       claims.Subject,
+		})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)

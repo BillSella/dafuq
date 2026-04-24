@@ -7,27 +7,70 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/dafuq-framework/dafuq/backend/internal/config"
 )
 
-func TestLoadAPIProxyRoutes(t *testing.T) {
+func TestLoadGatewayConfigEmptyPathUsesDefaultWorkOS(t *testing.T) {
+	auth, routes, err := LoadGatewayConfig("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(routes) != 0 {
+		t.Fatalf("expected no data routes, got %d", len(routes))
+	}
+	if !strings.EqualFold(auth.Plugin, "workos") || auth.ListenPath != "/api/auth/" {
+		t.Fatalf("unexpected default auth: %#v", auth)
+	}
+}
+
+func TestLoadGatewayConfigListenFieldAliasesEndpoint(t *testing.T) {
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "routes.json")
 	b, _ := json.Marshal(map[string]any{
 		"routes": []map[string]any{
 			{
-				"listen_path":   "/api/ext",
-				"upstream_path": "/v1/data",
-				"backends":      []string{"https://one.example.com", "https://two.example.com"},
+				"endpoint": "/api/legacy-endpoint",
+				"plugin":   map[string]any{"local": "local-metrics"},
 			},
 		},
 	})
 	if err := os.WriteFile(path, b, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	routes, err := LoadAPIProxyRoutes(path)
+	_, routes, err := LoadGatewayConfig(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(routes) != 1 || routes[0].ListenPath != "/api/legacy-endpoint/" {
+		t.Fatalf("expected endpoint alias, got %#v", routes[0])
+	}
+}
+
+func TestLoadGatewayConfigRoutesV2(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "routes.json")
+	b, _ := json.Marshal(map[string]any{
+		"routes": []map[string]any{
+			{
+				"listen": "/api/ext",
+				"plugin": map[string]any{
+					"proxy": []string{"https://one.example.com/v1/data", "https://two.example.com/v1/data"},
+				},
+			},
+		},
+	})
+	if err := os.WriteFile(path, b, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	auth, routes, err := LoadGatewayConfig(path)
 	if err != nil {
 		t.Fatalf("unexpected load error: %v", err)
+	}
+	if auth == nil || !strings.EqualFold(auth.Plugin, "workos") {
+		t.Fatalf("expected default or explicit workos auth, got %#v", auth)
 	}
 	if len(routes) != 1 {
 		t.Fatalf("expected 1 route, got %d", len(routes))
@@ -35,12 +78,69 @@ func TestLoadAPIProxyRoutes(t *testing.T) {
 	if routes[0].ListenPath != "/api/ext/" {
 		t.Fatalf("listen path was not normalized: %q", routes[0].ListenPath)
 	}
-	if routes[0].UpstreamPath != "/v1/data/" {
-		t.Fatalf("upstream path was not normalized: %q", routes[0].UpstreamPath)
+	if routes[0].Plugin != "" {
+		t.Fatalf("expected proxy route, not local plugin")
+	}
+	if len(routes[0].Backends) != 2 || !strings.HasSuffix(routes[0].Backends[0], "/v1/data") {
+		t.Fatalf("unexpected backends: %#v", routes[0].Backends)
 	}
 }
 
-func TestLoadAPIProxyRoutesWithPlugin(t *testing.T) {
+func TestLoadGatewayConfigRoutesLegacy(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "routes.json")
+	b, _ := json.Marshal(map[string]any{
+		"routes": []map[string]any{
+			{
+				"listen_path": "/api/ext",
+				"backends":    []string{"https://one.example.com/v1/data", "https://two.example.com/v1/data"},
+			},
+		},
+	})
+	if err := os.WriteFile(path, b, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, routes, err := LoadGatewayConfig(path)
+	if err != nil {
+		t.Fatalf("unexpected load error: %v", err)
+	}
+	if len(routes) != 1 || routes[0].ListenPath != "/api/ext/" || len(routes[0].Backends) != 2 {
+		t.Fatalf("unexpected route: %#v", routes[0])
+	}
+}
+
+func TestLoadGatewayConfigWithPluginV2(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "routes.json")
+	b, _ := json.Marshal(map[string]any{
+		"routes": []map[string]any{
+			{
+				"listen": "/api/local/metrics",
+				"plugin": map[string]any{
+					"local": "local-metrics",
+				},
+			},
+		},
+	})
+	if err := os.WriteFile(path, b, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, routes, err := LoadGatewayConfig(path)
+	if err != nil {
+		t.Fatalf("unexpected load error: %v", err)
+	}
+	if len(routes) != 1 {
+		t.Fatalf("expected 1 route, got %d", len(routes))
+	}
+	if routes[0].ListenPath != "/api/local/metrics/" {
+		t.Fatalf("listen path was not normalized: %q", routes[0].ListenPath)
+	}
+	if routes[0].Plugin != "local-metrics" {
+		t.Fatalf("plugin was not loaded: %q", routes[0].Plugin)
+	}
+}
+
+func TestLoadGatewayConfigPluginStringLegacy(t *testing.T) {
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "routes.json")
 	b, _ := json.Marshal(map[string]any{
@@ -54,18 +154,26 @@ func TestLoadAPIProxyRoutesWithPlugin(t *testing.T) {
 	if err := os.WriteFile(path, b, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	routes, err := LoadAPIProxyRoutes(path)
+	_, routes, err := LoadGatewayConfig(path)
 	if err != nil {
 		t.Fatalf("unexpected load error: %v", err)
 	}
-	if len(routes) != 1 {
-		t.Fatalf("expected 1 route, got %d", len(routes))
+	if len(routes) != 1 || routes[0].Plugin != "local-metrics" {
+		t.Fatalf("unexpected route: %#v", routes[0])
 	}
-	if routes[0].ListenPath != "/api/local/metrics/" {
-		t.Fatalf("listen path was not normalized: %q", routes[0].ListenPath)
+}
+
+func TestLoadGatewayFileExample(t *testing.T) {
+	path := filepath.Join("..", "..", "api-proxy-routes.example.json")
+	auth, routes, err := LoadGatewayConfig(path)
+	if err != nil {
+		t.Fatalf("load example: %v", err)
 	}
-	if routes[0].Plugin != "local-metrics" {
-		t.Fatalf("plugin was not loaded: %q", routes[0].Plugin)
+	if auth == nil || !strings.EqualFold(auth.Plugin, "workos") || auth.ListenPath != "/api/auth/" {
+		t.Fatalf("auth: %#v", auth)
+	}
+	if len(routes) != 3 {
+		t.Fatalf("expected 3 data routes, got %d", len(routes))
 	}
 }
 
@@ -86,10 +194,9 @@ func TestFailoverProxyUsesNextBackendOn5xx(t *testing.T) {
 	defer secondary.Close()
 
 	h := newFailoverProxy(APIProxyRoute{
-		ListenPath:   "/api/ext/",
-		UpstreamPath: "/v1/",
-		Backends:     []string{primary.URL, secondary.URL},
-	})
+		ListenPath: "/api/ext/",
+		Backends:   []string{primary.URL + "/v1", secondary.URL + "/v1"},
+	}, config.DefaultProxyMaxBodyBytes)
 	req := httptest.NewRequest(http.MethodGet, "/api/ext/widgets?id=9", nil)
 	req.Header.Set("Authorization", "Bearer test-token")
 	rr := httptest.NewRecorder()
@@ -115,7 +222,7 @@ func TestRouteHandlerWithPlugin(t *testing.T) {
 		ListenPath: "/api/local/metrics/",
 		Plugin:     "local-metrics",
 	}
-	h, err := routeHandler(route, reg)
+	h, err := routeHandler(route, reg, config.DefaultProxyMaxBodyBytes)
 	if err != nil {
 		t.Fatalf("unexpected plugin handler error: %v", err)
 	}
@@ -134,10 +241,9 @@ func TestFailoverProxyReturnsBadGatewayWhenAllBackendsFail(t *testing.T) {
 	defer down.Close()
 
 	h := newFailoverProxy(APIProxyRoute{
-		ListenPath:   "/api/ext/",
-		UpstreamPath: "/",
-		Backends:     []string{down.URL},
-	})
+		ListenPath: "/api/ext/",
+		Backends:   []string{down.URL},
+	}, config.DefaultProxyMaxBodyBytes)
 	req := httptest.NewRequest(http.MethodGet, "/api/ext/x", nil)
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)

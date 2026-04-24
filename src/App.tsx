@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { type GaugeConfig } from "./widgets/gaugeWidget";
 import { type LabelConfig } from "./widgets/labelWidget";
 import { DonutWidget, type DonutConfig } from "./widgets/donutWidget";
@@ -77,6 +77,8 @@ import {
   type TimeWindowState
 } from "./timeWindow";
 import { DafuqLogo } from "./components/DafuqLogo";
+import { clearAuthTokens, getAccessToken } from "./authToken";
+import { fetchDashboardsFromServer, saveDashboardsToServer } from "./dashboardServerSync";
 
 /**
  * Dashboard editor shell:
@@ -152,7 +154,10 @@ function App() {
   const [timeWindowMenuView, setTimeWindowMenuView] = createSignal<"list" | "custom">("list");
   const [customRangeFrom, setCustomRangeFrom] = createSignal("");
   const [customRangeTo, setCustomRangeTo] = createSignal("");
-  const [isAuthenticated, setIsAuthenticated] = createSignal(false);
+  const [isAuthenticated, setIsAuthenticated] = createSignal(
+    typeof window !== "undefined" && !!getAccessToken()
+  );
+  const [serverSyncReady, setServerSyncReady] = createSignal(false);
   const [dashboardMenuOpen, setDashboardMenuOpen] = createSignal(false);
   const [dashboardLocked, setDashboardLocked] = createSignal(true);
   const [selectedBreakpoint, setSelectedBreakpoint] = createSignal<DashboardBreakpoint>("desktopFhd");
@@ -1350,8 +1355,50 @@ function App() {
     previousStep = currentStep;
   });
 
+  let dashboardServerSaveTimer: ReturnType<typeof setTimeout> | undefined;
   createEffect(() => {
-    persistDashboardsToStorage(dashboards());
+    const docs = dashboards();
+    persistDashboardsToStorage(docs);
+    if (!serverSyncReady()) {
+      return;
+    }
+    const token = getAccessToken();
+    if (!token) {
+      if (dashboardServerSaveTimer !== undefined) {
+        window.clearTimeout(dashboardServerSaveTimer);
+        dashboardServerSaveTimer = undefined;
+      }
+      return;
+    }
+    if (dashboardServerSaveTimer !== undefined) {
+      window.clearTimeout(dashboardServerSaveTimer);
+    }
+    dashboardServerSaveTimer = window.setTimeout(() => {
+      dashboardServerSaveTimer = undefined;
+      void saveDashboardsToServer(docs);
+    }, 1200);
+  });
+  onCleanup(() => {
+    if (dashboardServerSaveTimer !== undefined) {
+      window.clearTimeout(dashboardServerSaveTimer);
+    }
+  });
+
+  onMount(() => {
+    void (async () => {
+      try {
+        if (getAccessToken()) {
+          const remote = await fetchDashboardsFromServer(BREAKPOINT_IDS);
+          if (remote && remote.length > 0) {
+            setDashboards(remote);
+            setActiveDashboardId(remote[0]!.id);
+          }
+        }
+      } finally {
+        setServerSyncReady(true);
+        setIsAuthenticated(!!getAccessToken());
+      }
+    })();
   });
 
   return (
@@ -1481,9 +1528,14 @@ function App() {
             setUserMenuOpen(false);
           }}
           onToggleAuth={() => {
-            setIsAuthenticated((value) => !value);
-            setActiveNavTool("userLogin");
-            setUserMenuOpen(false);
+            if (isAuthenticated()) {
+              clearAuthTokens();
+              setIsAuthenticated(false);
+              setUserMenuOpen(false);
+              void fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+            } else {
+              window.location.assign("/api/auth/login");
+            }
           }}
         />
       </header>

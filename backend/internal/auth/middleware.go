@@ -5,8 +5,9 @@ import (
 	"strings"
 )
 
-// BearerAuth requires a valid WorkOS access token (JWT) on Authorization: Bearer <token>.
-func BearerAuth(v *JWTValidator) func(http.Handler) http.Handler {
+// BearerAuth requires a valid access token (JWT) on Authorization: Bearer <token>.
+// The token is validated with the pluggable TokenValidator (WorkOS, OIDC, etc.).
+func BearerAuth(v TokenValidator) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			raw, ok := bearerToken(r)
@@ -14,12 +15,12 @@ func BearerAuth(v *JWTValidator) func(http.Handler) http.Handler {
 				jsonErr(w, http.StatusUnauthorized, `{"error":"missing_or_invalid_authorization"}`)
 				return
 			}
-			claims, err := v.Validate(r.Context(), raw)
+			claims, err := v.ValidateAccessToken(r.Context(), raw)
 			if err != nil {
 				jsonErr(w, http.StatusUnauthorized, `{"error":"invalid_token"}`)
 				return
 			}
-			ctx := ContextWithClaims(r.Context(), claims)
+			ctx := ContextWithAccessClaims(r.Context(), claims)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
