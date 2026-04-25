@@ -79,12 +79,8 @@ import {
 import { DafuqLogo } from "./components/DafuqLogo";
 import { useSession } from "./session/SessionContext";
 import { useDismissOnOutsideClick } from "./hooks/useDismissOnOutsideClick";
-import {
-  fetchDashboardVersionsFromServer,
-  fetchDashboardsFromServer,
-  rollbackDashboardToVersion,
-  saveDashboardsToServer
-} from "./dashboardServerSync";
+import { fetchDashboardsFromServer, saveDashboardsToServer } from "./dashboardServerSync";
+import { useDashboardRollback } from "./dashboard/useDashboardRollback";
 
 /**
  * Dashboard editor shell:
@@ -169,9 +165,6 @@ function App() {
   const [widgetMenuOpen, setWidgetMenuOpen] = createSignal(false);
   const [visibilityMenuOpen, setVisibilityMenuOpen] = createSignal(false);
   const [dashboardSettingsOpen, setDashboardSettingsOpen] = createSignal(false);
-  const [rollbackMenuOpen, setRollbackMenuOpen] = createSignal(false);
-  const [rollbackBusy, setRollbackBusy] = createSignal(false);
-  const [rollbackVersions, setRollbackVersions] = createSignal<string[]>([]);
   const [dashboardSettingsTop, setDashboardSettingsTop] = createSignal(0);
   const [dashboardSettingsLeft, setDashboardSettingsLeft] = createSignal(0);
   const [dashboardSettingsWidth] = createSignal(520);
@@ -210,6 +203,11 @@ function App() {
   const cellSize = createMemo(() => Math.max(1, gridUnitSize() - gap));
 
   const step = () => gridUnitSize();
+  const rollback = useDashboardRollback({
+    activeDashboardId,
+    setDashboards,
+    breakpointIds: BREAKPOINT_IDS
+  });
   const activeDashboardDoc = createMemo(
     () => dashboards().find((dashboard) => dashboard.id === activeDashboardId()) ?? null
   );
@@ -1054,7 +1052,7 @@ function App() {
     setBreakpointMenuOpen(false);
     setWidgetMenuOpen(false);
     setDashboardSettingsOpen(false);
-    setRollbackMenuOpen(false);
+    rollback.closeRollbackMenu();
   });
 
   createEffect(() => {
@@ -1135,10 +1133,10 @@ function App() {
   });
 
   useDismissOnOutsideClick({
-    isOpen: rollbackMenuOpen,
+    isOpen: rollback.rollbackMenuOpen,
     containerRef: () => rollbackMenuRef,
     triggerRef: () => rollbackButtonRef,
-    onDismiss: () => setRollbackMenuOpen(false)
+    onDismiss: rollback.closeRollbackMenu
   });
 
   createEffect(() => {
@@ -1291,7 +1289,7 @@ function App() {
     previousStep = currentStep;
   });
 
-  let dashboardServerSaveTimer: ReturnType<typeof setTimeout> | undefined;
+  let dashboardServerSaveTimer: number | undefined;
   createEffect(() => {
     const docs = dashboards();
     persistDashboardsToStorage(docs);
@@ -1334,50 +1332,6 @@ function App() {
       }
     })();
   });
-
-  const openRollbackMenu = async () => {
-    if (rollbackMenuOpen()) {
-      setRollbackMenuOpen(false);
-      return;
-    }
-    const dashboardId = activeDashboardId();
-    if (!dashboardId) {
-      setRollbackVersions([]);
-      setRollbackMenuOpen(true);
-      return;
-    }
-    setRollbackBusy(true);
-    try {
-      const versions = await fetchDashboardVersionsFromServer(dashboardId);
-      setRollbackVersions(versions ?? []);
-      setRollbackMenuOpen(true);
-    } finally {
-      setRollbackBusy(false);
-    }
-  };
-
-  const rollbackToVersion = async (timestamp: string) => {
-    const dashboardId = activeDashboardId();
-    if (!dashboardId) return;
-    const shouldRollback = window.confirm(
-      `Rollback dashboard to ${timestamp}? Unsaved local edits will be replaced.`
-    );
-    if (!shouldRollback) return;
-    setRollbackBusy(true);
-    try {
-      const rolledBack = await rollbackDashboardToVersion(dashboardId, timestamp, BREAKPOINT_IDS);
-      if (!rolledBack) {
-        window.alert("Rollback failed. Please try again.");
-        return;
-      }
-      setDashboards((previous) =>
-        previous.map((dashboard) => (dashboard.id === dashboardId ? rolledBack : dashboard))
-      );
-      setRollbackMenuOpen(false);
-    } finally {
-      setRollbackBusy(false);
-    }
-  };
 
   return (
     <div class="app-shell">
@@ -1433,9 +1387,9 @@ function App() {
             setDashboardSettingsOpen((open) => !open);
             queueMicrotask(updateDashboardSettingsPlacement);
           }}
-          rollbackMenuOpen={rollbackMenuOpen()}
-          rollbackBusy={rollbackBusy()}
-          rollbackVersions={rollbackVersions()}
+          rollbackMenuOpen={rollback.rollbackMenuOpen()}
+          rollbackBusy={rollback.rollbackBusy()}
+          rollbackVersions={rollback.rollbackVersions()}
           rollbackMenuRef={(el) => {
             rollbackMenuRef = el;
           }}
@@ -1443,10 +1397,10 @@ function App() {
             rollbackButtonRef = el;
           }}
           onToggleRollbackMenu={() => {
-            void openRollbackMenu();
+            void rollback.openRollbackMenu();
           }}
           onRollbackToVersion={(timestamp) => {
-            void rollbackToVersion(timestamp);
+            void rollback.rollbackToVersion(timestamp);
           }}
           onToggleWidgetMenu={() => setWidgetMenuOpen((open) => !open)}
           onLibraryPointerDown={(type) => {
