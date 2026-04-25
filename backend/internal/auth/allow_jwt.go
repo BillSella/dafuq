@@ -94,19 +94,33 @@ func (a *AllowValidator) parseAndVerify(raw string, wantType string) (allowParse
 
 // IssueAccessToken returns a short-lived access JWT (Bearer) for the allow plugin.
 func (a *AllowValidator) IssueAccessToken() (string, error) {
-	return a.signToken(allowJWTTypeAccess, 1*time.Hour)
+	return a.signTokenForSubject(a.subject, allowJWTTypeAccess, 1*time.Hour)
 }
 
 // IssueRefreshToken returns a long-lived refresh JWT for the allow plugin.
 func (a *AllowValidator) IssueRefreshToken() (string, error) {
-	return a.signToken(allowJWTTypeRefresh, 720*time.Hour)
+	return a.signTokenForSubject(a.subject, allowJWTTypeRefresh, 720*time.Hour)
 }
 
-func (a *AllowValidator) signToken(typ string, ttl time.Duration) (string, error) {
+// IssueAccessTokenForSubject returns an access token for the provided subject.
+func (a *AllowValidator) IssueAccessTokenForSubject(subject string) (string, error) {
+	return a.signTokenForSubject(subject, allowJWTTypeAccess, 1*time.Hour)
+}
+
+// IssueRefreshTokenForSubject returns a refresh token for the provided subject.
+func (a *AllowValidator) IssueRefreshTokenForSubject(subject string) (string, error) {
+	return a.signTokenForSubject(subject, allowJWTTypeRefresh, 720*time.Hour)
+}
+
+func (a *AllowValidator) signTokenForSubject(subject, typ string, ttl time.Duration) (string, error) {
+	sub := strings.TrimSpace(subject)
+	if sub == "" {
+		sub = a.subject
+	}
 	now := time.Now()
 	c := jwt.MapClaims{
 		"iss": allowJWTIssuer,
-		"sub": a.subject,
+		"sub": sub,
 		"typ": typ,
 		"iat": now.Unix(),
 		"exp": now.Add(ttl).Unix(),

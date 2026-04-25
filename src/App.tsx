@@ -77,8 +77,14 @@ import {
   type TimeWindowState
 } from "./timeWindow";
 import { DafuqLogo } from "./components/DafuqLogo";
-import { clearAuthTokens, getAccessToken } from "./authToken";
-import { fetchDashboardsFromServer, saveDashboardsToServer } from "./dashboardServerSync";
+import { useSession } from "./session/SessionContext";
+import { useDismissOnOutsideClick } from "./hooks/useDismissOnOutsideClick";
+import {
+  fetchDashboardVersionsFromServer,
+  fetchDashboardsFromServer,
+  rollbackDashboardToVersion,
+  saveDashboardsToServer
+} from "./dashboardServerSync";
 
 /**
  * Dashboard editor shell:
@@ -92,7 +98,6 @@ type NavTool =
   | "trafficAnalysis"
   | "help"
   | "settings"
-  | "userLogin"
   | "userSettings";
 const LIBRARY_WIDGET_KEY = "application/x-dashboard-widget";
 type DashboardWidget = WidgetStateByType;
@@ -125,6 +130,7 @@ function widgetTypeIcon(type: WidgetType): string {
 }
 
 function App() {
+  const session = useSession();
   const initialDashboards = loadDashboardsFromStorage(BREAKPOINT_IDS);
   const [gridUnitSize, setGridUnitSize] = createSignal(16);
   const [gridViewportWidth, setGridViewportWidth] = createSignal(900);
@@ -154,9 +160,6 @@ function App() {
   const [timeWindowMenuView, setTimeWindowMenuView] = createSignal<"list" | "custom">("list");
   const [customRangeFrom, setCustomRangeFrom] = createSignal("");
   const [customRangeTo, setCustomRangeTo] = createSignal("");
-  const [isAuthenticated, setIsAuthenticated] = createSignal(
-    typeof window !== "undefined" && !!getAccessToken()
-  );
   const [serverSyncReady, setServerSyncReady] = createSignal(false);
   const [dashboardMenuOpen, setDashboardMenuOpen] = createSignal(false);
   const [dashboardLocked, setDashboardLocked] = createSignal(true);
@@ -166,6 +169,9 @@ function App() {
   const [widgetMenuOpen, setWidgetMenuOpen] = createSignal(false);
   const [visibilityMenuOpen, setVisibilityMenuOpen] = createSignal(false);
   const [dashboardSettingsOpen, setDashboardSettingsOpen] = createSignal(false);
+  const [rollbackMenuOpen, setRollbackMenuOpen] = createSignal(false);
+  const [rollbackBusy, setRollbackBusy] = createSignal(false);
+  const [rollbackVersions, setRollbackVersions] = createSignal<string[]>([]);
   const [dashboardSettingsTop, setDashboardSettingsTop] = createSignal(0);
   const [dashboardSettingsLeft, setDashboardSettingsLeft] = createSignal(0);
   const [dashboardSettingsWidth] = createSignal(520);
@@ -191,6 +197,8 @@ function App() {
   let visibilityMenuButtonRef: HTMLButtonElement | undefined;
   let dashboardSettingsPanelRef: HTMLDivElement | undefined;
   let dashboardSettingsButtonRef: HTMLButtonElement | undefined;
+  let rollbackMenuRef: HTMLDivElement | undefined;
+  let rollbackButtonRef: HTMLButtonElement | undefined;
   const widgetRefs = new Map<string, HTMLDivElement>();
   let idCounter = 2;
   let previousStep = 32;
@@ -357,7 +365,6 @@ function App() {
     if (active === "dashboards") return "Dashboards";
     if (active === "trafficAnalysis") return "Traffic Analysis";
     if (active === "help") return "Help";
-    if (active === "userLogin") return "User Login";
     if (active === "userSettings") return "User Settings";
     return "Settings";
   });
@@ -1047,6 +1054,7 @@ function App() {
     setBreakpointMenuOpen(false);
     setWidgetMenuOpen(false);
     setDashboardSettingsOpen(false);
+    setRollbackMenuOpen(false);
   });
 
   createEffect(() => {
@@ -1081,128 +1089,56 @@ function App() {
     }
   });
 
-  createEffect(() => {
-    if (!userMenuOpen()) return;
-    const onEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setUserMenuOpen(false);
-    };
-    const onPointerDownOutside = (event: PointerEvent) => {
-      const target = event.target as Node | null;
-      if (!target) return;
-      if (userMenuRef?.contains(target)) return;
-      if (userMenuButtonRef?.contains(target)) return;
-      setUserMenuOpen(false);
-    };
-    window.addEventListener("keydown", onEscape);
-    window.addEventListener("pointerdown", onPointerDownOutside);
-    onCleanup(() => {
-      window.removeEventListener("keydown", onEscape);
-      window.removeEventListener("pointerdown", onPointerDownOutside);
-    });
+  useDismissOnOutsideClick({
+    isOpen: userMenuOpen,
+    containerRef: () => userMenuRef,
+    triggerRef: () => userMenuButtonRef,
+    onDismiss: () => setUserMenuOpen(false)
   });
 
-  createEffect(() => {
-    if (!timeWindowMenuOpen()) return;
-    const onEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setTimeWindowMenuOpen(false);
-        setTimeWindowMenuView("list");
-      }
-    };
-    const onPointerDownOutside = (event: PointerEvent) => {
-      const target = event.target as Node | null;
-      if (!target) return;
-      if (timeWindowMenuRef?.contains(target)) return;
-      if (timeWindowButtonRef?.contains(target)) return;
+  useDismissOnOutsideClick({
+    isOpen: timeWindowMenuOpen,
+    containerRef: () => timeWindowMenuRef,
+    triggerRef: () => timeWindowButtonRef,
+    onDismiss: () => {
       setTimeWindowMenuOpen(false);
       setTimeWindowMenuView("list");
-    };
-    window.addEventListener("keydown", onEscape);
-    window.addEventListener("pointerdown", onPointerDownOutside);
-    onCleanup(() => {
-      window.removeEventListener("keydown", onEscape);
-      window.removeEventListener("pointerdown", onPointerDownOutside);
-    });
+    }
   });
 
-  createEffect(() => {
-    if (!dashboardMenuOpen()) return;
-    const onEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setDashboardMenuOpen(false);
-    };
-    const onPointerDownOutside = (event: PointerEvent) => {
-      const target = event.target as Node | null;
-      if (!target) return;
-      if (dashboardMenuRef?.contains(target)) return;
-      if (dashboardMenuButtonRef?.contains(target)) return;
-      setDashboardMenuOpen(false);
-    };
-    window.addEventListener("keydown", onEscape);
-    window.addEventListener("pointerdown", onPointerDownOutside);
-    onCleanup(() => {
-      window.removeEventListener("keydown", onEscape);
-      window.removeEventListener("pointerdown", onPointerDownOutside);
-    });
+  useDismissOnOutsideClick({
+    isOpen: dashboardMenuOpen,
+    containerRef: () => dashboardMenuRef,
+    triggerRef: () => dashboardMenuButtonRef,
+    onDismiss: () => setDashboardMenuOpen(false)
   });
 
-  createEffect(() => {
-    if (!widgetMenuOpen()) return;
-    const onEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setWidgetMenuOpen(false);
-    };
-    const onPointerDownOutside = (event: PointerEvent) => {
-      const target = event.target as Node | null;
-      if (!target) return;
-      if (widgetMenuRef?.contains(target)) return;
-      if (widgetMenuButtonRef?.contains(target)) return;
-      setWidgetMenuOpen(false);
-    };
-    window.addEventListener("keydown", onEscape);
-    window.addEventListener("pointerdown", onPointerDownOutside);
-    onCleanup(() => {
-      window.removeEventListener("keydown", onEscape);
-      window.removeEventListener("pointerdown", onPointerDownOutside);
-    });
+  useDismissOnOutsideClick({
+    isOpen: widgetMenuOpen,
+    containerRef: () => widgetMenuRef,
+    triggerRef: () => widgetMenuButtonRef,
+    onDismiss: () => setWidgetMenuOpen(false)
   });
 
-  createEffect(() => {
-    if (!visibilityMenuOpen()) return;
-    const onEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setVisibilityMenuOpen(false);
-    };
-    const onPointerDownOutside = (event: PointerEvent) => {
-      const target = event.target as Node | null;
-      if (!target) return;
-      if (visibilityMenuRef?.contains(target)) return;
-      if (visibilityMenuButtonRef?.contains(target)) return;
-      setVisibilityMenuOpen(false);
-    };
-    window.addEventListener("keydown", onEscape);
-    window.addEventListener("pointerdown", onPointerDownOutside);
-    onCleanup(() => {
-      window.removeEventListener("keydown", onEscape);
-      window.removeEventListener("pointerdown", onPointerDownOutside);
-    });
+  useDismissOnOutsideClick({
+    isOpen: visibilityMenuOpen,
+    containerRef: () => visibilityMenuRef,
+    triggerRef: () => visibilityMenuButtonRef,
+    onDismiss: () => setVisibilityMenuOpen(false)
   });
 
-  createEffect(() => {
-    if (!breakpointMenuOpen()) return;
-    const onEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setBreakpointMenuOpen(false);
-    };
-    const onPointerDownOutside = (event: PointerEvent) => {
-      const target = event.target as Node | null;
-      if (!target) return;
-      if (breakpointMenuRef?.contains(target)) return;
-      if (breakpointMenuButtonRef?.contains(target)) return;
-      setBreakpointMenuOpen(false);
-    };
-    window.addEventListener("keydown", onEscape);
-    window.addEventListener("pointerdown", onPointerDownOutside);
-    onCleanup(() => {
-      window.removeEventListener("keydown", onEscape);
-      window.removeEventListener("pointerdown", onPointerDownOutside);
-    });
+  useDismissOnOutsideClick({
+    isOpen: breakpointMenuOpen,
+    containerRef: () => breakpointMenuRef,
+    triggerRef: () => breakpointMenuButtonRef,
+    onDismiss: () => setBreakpointMenuOpen(false)
+  });
+
+  useDismissOnOutsideClick({
+    isOpen: rollbackMenuOpen,
+    containerRef: () => rollbackMenuRef,
+    triggerRef: () => rollbackButtonRef,
+    onDismiss: () => setRollbackMenuOpen(false)
   });
 
   createEffect(() => {
@@ -1362,8 +1298,7 @@ function App() {
     if (!serverSyncReady()) {
       return;
     }
-    const token = getAccessToken();
-    if (!token) {
+    if (!session.isAuthenticated()) {
       if (dashboardServerSaveTimer !== undefined) {
         window.clearTimeout(dashboardServerSaveTimer);
         dashboardServerSaveTimer = undefined;
@@ -1387,7 +1322,7 @@ function App() {
   onMount(() => {
     void (async () => {
       try {
-        if (getAccessToken()) {
+        if (session.isAuthenticated()) {
           const remote = await fetchDashboardsFromServer(BREAKPOINT_IDS);
           if (remote && remote.length > 0) {
             setDashboards(remote);
@@ -1396,10 +1331,53 @@ function App() {
         }
       } finally {
         setServerSyncReady(true);
-        setIsAuthenticated(!!getAccessToken());
       }
     })();
   });
+
+  const openRollbackMenu = async () => {
+    if (rollbackMenuOpen()) {
+      setRollbackMenuOpen(false);
+      return;
+    }
+    const dashboardId = activeDashboardId();
+    if (!dashboardId) {
+      setRollbackVersions([]);
+      setRollbackMenuOpen(true);
+      return;
+    }
+    setRollbackBusy(true);
+    try {
+      const versions = await fetchDashboardVersionsFromServer(dashboardId);
+      setRollbackVersions(versions ?? []);
+      setRollbackMenuOpen(true);
+    } finally {
+      setRollbackBusy(false);
+    }
+  };
+
+  const rollbackToVersion = async (timestamp: string) => {
+    const dashboardId = activeDashboardId();
+    if (!dashboardId) return;
+    const shouldRollback = window.confirm(
+      `Rollback dashboard to ${timestamp}? Unsaved local edits will be replaced.`
+    );
+    if (!shouldRollback) return;
+    setRollbackBusy(true);
+    try {
+      const rolledBack = await rollbackDashboardToVersion(dashboardId, timestamp, BREAKPOINT_IDS);
+      if (!rolledBack) {
+        window.alert("Rollback failed. Please try again.");
+        return;
+      }
+      setDashboards((previous) =>
+        previous.map((dashboard) => (dashboard.id === dashboardId ? rolledBack : dashboard))
+      );
+      setRollbackMenuOpen(false);
+    } finally {
+      setRollbackBusy(false);
+    }
+  };
 
   return (
     <div class="app-shell">
@@ -1455,6 +1433,21 @@ function App() {
             setDashboardSettingsOpen((open) => !open);
             queueMicrotask(updateDashboardSettingsPlacement);
           }}
+          rollbackMenuOpen={rollbackMenuOpen()}
+          rollbackBusy={rollbackBusy()}
+          rollbackVersions={rollbackVersions()}
+          rollbackMenuRef={(el) => {
+            rollbackMenuRef = el;
+          }}
+          rollbackButtonRef={(el) => {
+            rollbackButtonRef = el;
+          }}
+          onToggleRollbackMenu={() => {
+            void openRollbackMenu();
+          }}
+          onRollbackToVersion={(timestamp) => {
+            void rollbackToVersion(timestamp);
+          }}
           onToggleWidgetMenu={() => setWidgetMenuOpen((open) => !open)}
           onLibraryPointerDown={(type) => {
             if (dashboardLocked()) return;
@@ -1491,7 +1484,6 @@ function App() {
           customRangeFrom={customRangeFrom()}
           customRangeTo={customRangeTo()}
           relativePresets={RELATIVE_PRESETS}
-          isAuthenticated={isAuthenticated()}
           activeNavTool={activeNavTool()}
           userMenuOpen={userMenuOpen()}
           timeWindowButtonRef={(el) => {
@@ -1524,24 +1516,20 @@ function App() {
           onApplyRelativePreset={(presetId) => applyTimeWindow({ kind: "relative", preset: presetId })}
           onToggleUserMenu={() => setUserMenuOpen((open) => !open)}
           onOpenUserSettings={() => {
+            if (!dashboardLocked()) return;
             setActiveNavTool("userSettings");
             setUserMenuOpen(false);
           }}
-          onToggleAuth={() => {
-            if (isAuthenticated()) {
-              clearAuthTokens();
-              setIsAuthenticated(false);
-              setUserMenuOpen(false);
-              void fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
-            } else {
-              window.location.assign("/api/auth/login");
-            }
-          }}
+          onCloseUserMenu={() => setUserMenuOpen(false)}
         />
       </header>
 
       <div class="app-main">
-        <LeftNavRail activeNavTool={activeNavTool()} onSelectNavTool={setActiveNavTool} />
+        <LeftNavRail
+          activeNavTool={activeNavTool()}
+          toolSwitchLocked={!dashboardLocked()}
+          onSelectNavTool={setActiveNavTool}
+        />
 
         <main class="dashboard-host">
           {activeNavTool() === "dashboards" ? (
@@ -2362,12 +2350,6 @@ function App() {
           </>
           ) : activeNavTool() === "trafficAnalysis" ? (
             <DashboardPlaceholderPane message="Traffic Analysis view placeholder." />
-          ) : activeNavTool() === "userLogin" ? (
-            <DashboardPlaceholderPane
-              message={`User Login view placeholder. Current state: ${
-                isAuthenticated() ? "Authenticated" : "Signed out"
-              }.`}
-            />
           ) : activeNavTool() === "userSettings" ? (
             <DashboardPlaceholderPane message="User Settings view placeholder." />
           ) : activeNavTool() === "help" ? (

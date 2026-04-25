@@ -1,16 +1,19 @@
 import { NavBottomGroup } from "../ui/NavBottomGroup";
 import { NavToolButton } from "../ui/NavToolButton";
 
-type LeftNavTool = "dashboards" | "trafficAnalysis" | "help" | "settings" | "userLogin" | "userSettings";
+type LeftNavTool = "dashboards" | "trafficAnalysis" | "help" | "settings" | "userSettings";
 
 type LeftNavRailProps = {
   activeNavTool: LeftNavTool;
+  toolSwitchLocked?: boolean;
   onSelectNavTool: (tool: LeftNavTool) => void;
 };
 
 export function LeftNavRail(props: LeftNavRailProps) {
+  const toolSwitchLocked = () => !!props.toolSwitchLocked;
+
   return (
-    <aside class="left-nav">
+    <aside class="left-nav" classList={{ "nav-switch-disabled": toolSwitchLocked() }}>
       <NavToolButton
         active={props.activeNavTool === "dashboards"}
         title="Dashboards"
@@ -32,6 +35,7 @@ export function LeftNavRail(props: LeftNavRailProps) {
         title="Traffic Analysis"
         label="Traffic Analysis"
         showNativeTooltip={false}
+        blocked={toolSwitchLocked()}
         onClick={() => props.onSelectNavTool("trafficAnalysis")}
         icon={
           <svg viewBox="0 0 24 24">
@@ -49,6 +53,7 @@ export function LeftNavRail(props: LeftNavRailProps) {
             title="Help"
             label="Help"
             showNativeTooltip={false}
+            blocked={toolSwitchLocked()}
             onClick={() => props.onSelectNavTool("help")}
             icon={<>?</>}
           />
@@ -57,6 +62,7 @@ export function LeftNavRail(props: LeftNavRailProps) {
             title="Settings"
             label="Settings"
             showNativeTooltip={false}
+            blocked={toolSwitchLocked()}
             onClick={() => props.onSelectNavTool("settings")}
             icon={<>⚙</>}
           />

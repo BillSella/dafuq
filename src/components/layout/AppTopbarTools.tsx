@@ -1,9 +1,10 @@
 import { For, Show, type JSX } from "solid-js";
+import { useSession } from "../../session/SessionContext";
 import type { RelativePresetId, TimeWindowState } from "../../timeWindow";
 import { MenuDropdown } from "../ui/MenuDropdown";
 import { ToolButton } from "../ui/ToolButton";
 
-type NavTool = "dashboards" | "trafficAnalysis" | "help" | "settings" | "userLogin" | "userSettings";
+type NavTool = "dashboards" | "trafficAnalysis" | "help" | "settings" | "userSettings";
 
 type AppTopbarToolsProps = {
   currentClock: string;
@@ -15,7 +16,6 @@ type AppTopbarToolsProps = {
   customRangeFrom: string;
   customRangeTo: string;
   relativePresets: ReadonlyArray<{ id: RelativePresetId; label: string }>;
-  isAuthenticated: boolean;
   activeNavTool: NavTool;
   userMenuOpen: boolean;
   timeWindowButtonRef?: JSX.HTMLAttributes<HTMLButtonElement>["ref"];
@@ -33,10 +33,17 @@ type AppTopbarToolsProps = {
   onApplyRelativePreset: (presetId: RelativePresetId) => void;
   onToggleUserMenu: () => void;
   onOpenUserSettings: () => void;
-  onToggleAuth: () => void;
+  onCloseUserMenu?: () => void;
 };
 
 export function AppTopbarTools(props: AppTopbarToolsProps) {
+  const session = useSession();
+
+  const onLogOut = () => {
+    session.logOut();
+    props.onCloseUserMenu?.();
+  };
+
   return (
     <div class="app-topbar-tools">
       <Show
@@ -148,7 +155,7 @@ export function AppTopbarTools(props: AppTopbarToolsProps) {
           class="user-tool"
           classList={{
             open: props.userMenuOpen,
-            active: props.activeNavTool === "userLogin" || props.activeNavTool === "userSettings"
+            active: props.activeNavTool === "userSettings"
           }}
           type="button"
           aria-label="User menu"
@@ -173,8 +180,8 @@ export function AppTopbarTools(props: AppTopbarToolsProps) {
           <button class="user-menu-item" type="button" role="menuitem" onClick={props.onOpenUserSettings}>
             User Settings
           </button>
-          <button class="user-menu-item" type="button" role="menuitem" onClick={props.onToggleAuth}>
-            {props.isAuthenticated ? "Log Out" : "Log In"}
+          <button class="user-menu-item" type="button" role="menuitem" onClick={onLogOut}>
+            Log Out
           </button>
         </MenuDropdown>
       </div>

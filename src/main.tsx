@@ -1,9 +1,16 @@
 import { render } from "solid-js/web";
 import { captureOAuthTokensFromUrl } from "./authToken";
-import App from "./App";
+import { AppAuthGate } from "./AppAuthGate";
+import { SessionProvider } from "./session/SessionContext";
 import "./index.css";
 
 captureOAuthTokensFromUrl();
 
-// Single app mount point for the dashboard editor.
-render(() => <App />, document.getElementById("root") as HTMLElement);
+render(
+  () => (
+    <SessionProvider>
+      <AppAuthGate />
+    </SessionProvider>
+  ),
+  document.getElementById("root") as HTMLElement
+);

@@ -63,7 +63,7 @@ func NewMux(cfg config.Config, opts ...MuxOption) (http.Handler, error) {
 
 	apiV1 := http.NewServeMux()
 	apiV1.HandleFunc("GET /metrics/sample-gauge", api.SampleGaugeValue)
-	dashStore := api.NewDashboardStore(cfg.DashboardDataDir)
+	dashStore := api.NewDashboardStore(cfg.DashboardDataDir, cfg.OrganizationID)
 	api.RegisterDashboardRoutes(apiV1, dashStore)
 
 	mux := http.NewServeMux()
@@ -79,8 +79,9 @@ func NewMux(cfg config.Config, opts ...MuxOption) (http.Handler, error) {
 		return nil, err
 	}
 
-	mux.HandleFunc("GET /{$}", spaIndex(cfg.StaticDir))
-	mux.HandleFunc("GET /{path...}", spaOrFile(cfg.StaticDir))
+	// Register SPA fallback without method patterns to avoid conflicts with method-aware
+	// API routes on newer net/http ServeMux versions.
+	mux.HandleFunc("/", spaOrFile(cfg.StaticDir))
 
 	return withProductionMiddleware(logRequests(mux)), nil
 }

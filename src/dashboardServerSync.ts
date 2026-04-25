@@ -11,6 +11,10 @@ type DashboardsEnvelope = {
 };
 
 const apiPath = "/api/v1/dashboards";
+const versionsApiPath = (dashboardId: string) =>
+  `/api/v1/dashboards/${encodeURIComponent(dashboardId)}/versions`;
+const rollbackApiPath = (dashboardId: string) =>
+  `/api/v1/dashboards/${encodeURIComponent(dashboardId)}/rollback`;
 
 /**
  * Fetches dashboard documents from the Go server. Returns null if unauthenticated
@@ -56,4 +60,45 @@ export async function saveDashboardsToServer(docs: DashboardDoc[]): Promise<bool
     body: JSON.stringify(body)
   });
   return res.ok;
+}
+
+export async function fetchDashboardVersionsFromServer(dashboardId: string): Promise<string[] | null> {
+  const token = getAccessToken();
+  if (!token) return null;
+  const res = await fetch(versionsApiPath(dashboardId), {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" }
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as { versions?: Array<{ timestamp?: string }> };
+  if (!Array.isArray(data?.versions)) return [];
+  return data.versions
+    .map((v) => (typeof v.timestamp === "string" ? v.timestamp : ""))
+    .filter((value) => value.length > 0)
+    .slice(0, 10);
+}
+
+export async function rollbackDashboardToVersion(
+  dashboardId: string,
+  timestamp: string,
+  breakpointIds: DashboardBreakpoint[]
+): Promise<DashboardDoc | null> {
+  const token = getAccessToken();
+  if (!token) return null;
+  const res = await fetch(rollbackApiPath(dashboardId), {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ timestamp })
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as { dashboard?: unknown };
+  if (!data || !data.dashboard) return null;
+  const normalized = normalizeDashboardDoc(data.dashboard as DashboardDoc, breakpointIds);
+  if (!normalized?.id || !normalized?.name || !Array.isArray(normalized.widgets)) {
+    return null;
+  }
+  return normalized;
 }

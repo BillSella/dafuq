@@ -5,8 +5,12 @@ export default defineConfig({
   plugins: [solid()],
   server: {
     proxy: {
-      // Dev: Vite (5173) → Go app (e.g. 8080) for /api and OAuth.
-      "/api": { target: "http://127.0.0.1:8080", changeOrigin: true }
+      // Dev: Vite (5173) -> Go app for /api and OAuth.
+      // Override with VITE_API_PROXY_TARGET (e.g. http://127.0.0.1:18080).
+      "/api": {
+        target: process.env.VITE_API_PROXY_TARGET ?? "http://127.0.0.1:8080",
+        changeOrigin: true
+      }
     }
   }
 });

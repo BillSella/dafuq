@@ -19,6 +19,7 @@ type Config struct {
 	TLSKeyFile        string
 	StaticDir         string
 	DashboardDataDir  string
+	OrganizationID    string
 	BackendAPIBaseURL string
 	// APIProxyConfigFile: gateway JSON path, set in cmd/server from -c / --conf only.
 	APIProxyConfigFile string

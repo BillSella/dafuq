@@ -5,7 +5,7 @@ import type { WidgetLibraryItem, WidgetType } from "../../widgets/widgetRegistry
 import { MenuDropdown } from "../ui/MenuDropdown";
 import { ToolButton } from "../ui/ToolButton";
 
-type NavTool = "dashboards" | "trafficAnalysis" | "help" | "settings" | "userLogin" | "userSettings";
+type NavTool = "dashboards" | "trafficAnalysis" | "help" | "settings" | "userSettings";
 
 type AppTopbarCenterProps = {
   activeNavTool: NavTool;
@@ -34,6 +34,13 @@ type AppTopbarCenterProps = {
   onCreateDashboard: () => void;
   onSelectDashboard: (dashboardId: string) => void;
   onToggleDashboardSettings: () => void;
+  rollbackMenuOpen: boolean;
+  rollbackBusy: boolean;
+  rollbackVersions: string[];
+  rollbackMenuRef?: JSX.HTMLAttributes<HTMLDivElement>["ref"];
+  rollbackButtonRef?: JSX.HTMLAttributes<HTMLButtonElement>["ref"];
+  onToggleRollbackMenu: () => void;
+  onRollbackToVersion: (timestamp: string) => void;
   onToggleWidgetMenu: () => void;
   onLibraryPointerDown: (type: WidgetType) => void;
   onLibraryDragStart: (event: DragEvent, type: WidgetType) => void;
@@ -119,6 +126,54 @@ export function AppTopbarCenter(props: AppTopbarCenterProps) {
                 ⚙
               </span>
             </ToolButton>
+            <Show when={!props.dashboardLocked}>
+              <div class="widget-menu-shell">
+                <ToolButton
+                  ref={props.rollbackButtonRef}
+                  class="dashboard-settings-toggle"
+                  classList={{ open: props.rollbackMenuOpen }}
+                  type="button"
+                  title="Rollback Dashboard"
+                  aria-label="Rollback dashboard"
+                  aria-expanded={props.rollbackMenuOpen}
+                  disabled={props.rollbackBusy}
+                  onClick={props.onToggleRollbackMenu}
+                >
+                  <span class="dashboard-tool-icon" aria-hidden="true">
+                    ↺
+                  </span>
+                </ToolButton>
+                <MenuDropdown
+                  ref={props.rollbackMenuRef}
+                  class="widget-menu-dropdown"
+                  open={props.rollbackMenuOpen}
+                  role="menu"
+                  aria-label="Rollback versions"
+                >
+                  <Show
+                    when={props.rollbackVersions.length > 0}
+                    fallback={
+                      <div class="widget-menu-item disabled" role="menuitem" aria-disabled="true">
+                        No versions available
+                      </div>
+                    }
+                  >
+                    <For each={props.rollbackVersions}>
+                      {(timestamp) => (
+                        <button
+                          class="widget-menu-item rollback-version-item"
+                          type="button"
+                          role="menuitem"
+                          onClick={() => props.onRollbackToVersion(timestamp)}
+                        >
+                          {timestamp}
+                        </button>
+                      )}
+                    </For>
+                  </Show>
+                </MenuDropdown>
+              </div>
+            </Show>
             <ToolButton
               class="dashboard-add-page-toggle"
               type="button"

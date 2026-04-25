@@ -33,6 +33,7 @@ func main() {
 	tlsCert := fs.String("tls-cert", "", "TLS certificate file (set together with --tls-key)")
 	tlsKey := fs.String("tls-key", "", "TLS private key file (set together with --tls-cert)")
 	dashboardDataDir := fs.String("dashboard-data-dir", config.DefaultDashboardDataDir, "directory for per-user dashboard JSON files")
+	organizationID := fs.String("organization-id", "default", "organization identifier used to scope dashboard storage")
 	cookieSecure := fs.String("cookie-secure", "", "Set-Cookie Secure attribute: true, false, or omit (omit => true when using TLS, false for plain HTTP)")
 	help := fs.BoolP("help", "h", false, "show this help and exit")
 	ver := fs.BoolP("version", "v", false, "print version and exit")
@@ -86,6 +87,10 @@ func main() {
 	cfg.DashboardDataDir = strings.TrimSpace(*dashboardDataDir)
 	if cfg.DashboardDataDir == "" {
 		log.Fatal("config: --dashboard-data-dir must be non-empty")
+	}
+	cfg.OrganizationID = strings.TrimSpace(*organizationID)
+	if cfg.OrganizationID == "" {
+		log.Fatal("config: --organization-id must be non-empty")
 	}
 	if s := strings.TrimSpace(*cookieSecure); s != "" {
 		b, err := strconv.ParseBool(s)
@@ -161,6 +166,6 @@ func usage(prog string, fs *pflag.FlagSet) {
 		fs.PrintDefaults()
 	}
 	_, _ = fmt.Fprintln(w, "\nThe gateway file must include a top-level \"auth\" object. If -c is omitted, the default path is", config.DefaultConfigFilePath+".")
-	_, _ = fmt.Fprintln(w, "Listen, static, TLS, data dir, and cookies: -a, --static-dir, --tls-*, --dashboard-data-dir, --cookie-secure (defaults: :8080 or :8443 with TLS, static-dir", config.DefaultStaticDir+", dashboard", config.DefaultDashboardDataDir+").")
+	_, _ = fmt.Fprintln(w, "Listen, static, TLS, org/data dir, and cookies: -a, --static-dir, --tls-*, --organization-id, --dashboard-data-dir, --cookie-secure (defaults: :8080 or :8443 with TLS, static-dir", config.DefaultStaticDir+", org default, dashboard", config.DefaultDashboardDataDir+").")
 	_, _ = fmt.Fprintln(w, "For auth plugin \"allow\", you must also pass --insecure (dev and testing only).")
 }

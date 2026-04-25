@@ -1,0 +1,8 @@
+{
+  "auth": {
+    "listen": "/api/auth",
+    "plugin": {
+      "local": "allow"
+    }
+  }
+}

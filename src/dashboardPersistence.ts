@@ -8,11 +8,8 @@ import {
 } from "./dashboardStore";
 
 export function createDefaultDashboards(breakpointIds: DashboardBreakpoint[]): DashboardDoc[] {
-  return [
-    createDashboardDoc("Operations", true, breakpointIds),
-    createDashboardDoc("Executive KPI", false, breakpointIds),
-    createDashboardDoc("Traffic Overview", false, breakpointIds)
-  ];
+  void breakpointIds;
+  return [];
 }
 
 export function loadDashboardsFromStorage(breakpointIds: DashboardBreakpoint[]): DashboardDoc[] {
@@ -48,5 +45,21 @@ export function persistDashboardsToStorage(docs: DashboardDoc[]): void {
     });
   } catch {
     // Ignore storage quota/availability errors; UI state still remains in-memory.
+  }
+}
+
+export function clearPersistedDashboards(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const storedIndex = window.localStorage.getItem(DASHBOARD_INDEX_STORAGE_KEY);
+    if (storedIndex) {
+      const dashboardIds = JSON.parse(storedIndex) as string[];
+      for (const id of dashboardIds) {
+        window.localStorage.removeItem(makeDashboardStorageKey(id));
+      }
+    }
+    window.localStorage.removeItem(DASHBOARD_INDEX_STORAGE_KEY);
+  } catch {
+    // Ignore localStorage read/write errors.
   }
 }

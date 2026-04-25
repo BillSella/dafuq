@@ -13,6 +13,12 @@ import (
 	"github.com/dafuq-framework/dafuq/backend/internal/config"
 )
 
+type allowPasswordBody struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 // AllowHandler serves the in-process "allow" dev auth API (no external IdP). Tokens are
 // HS256 JWTs that always pass [AllowValidator].
 type AllowHandler struct {
@@ -84,12 +90,25 @@ func (a *AllowHandler) Password(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
 	}
-	at, err := a.v.IssueAccessToken()
+	sub := a.v.Subject()
+	if len(bytes.TrimSpace(b)) > 0 {
+		var body allowPasswordBody
+		if err := json.Unmarshal(b, &body); err != nil {
+			http.Error(w, "invalid json", http.StatusBadRequest)
+			return
+		}
+		if u := strings.TrimSpace(body.Username); u != "" {
+			sub = u
+		} else if e := strings.TrimSpace(body.Email); e != "" {
+			sub = e
+		}
+	}
+	at, err := a.v.IssueAccessTokenForSubject(sub)
 	if err != nil {
 		http.Error(w, "issue access", http.StatusInternalServerError)
 		return
 	}
-	rt, err := a.v.IssueRefreshToken()
+	rt, err := a.v.IssueRefreshTokenForSubject(sub)
 	if err != nil {
 		http.Error(w, "issue refresh", http.StatusInternalServerError)
 		return
@@ -119,12 +138,17 @@ func (a *AllowHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "invalid_refresh_token"})
 		return
 	}
-	at, err := a.v.IssueAccessToken()
+	parsed, err := a.v.parseAndVerify(body.RefreshToken, allowJWTTypeRefresh)
+	if err != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "invalid_refresh_token"})
+		return
+	}
+	at, err := a.v.IssueAccessTokenForSubject(parsed.sub)
 	if err != nil {
 		http.Error(w, "issue", http.StatusInternalServerError)
 		return
 	}
-	rt, err := a.v.IssueRefreshToken()
+	rt, err := a.v.IssueRefreshTokenForSubject(parsed.sub)
 	if err != nil {
 		http.Error(w, "issue", http.StatusInternalServerError)
 		return
