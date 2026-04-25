@@ -12,6 +12,14 @@ type PillSelectorProps<T extends string | number> = {
   onSelect: (value: T) => void;
 };
 
+/**
+ * Generic radio-like pill selector primitive.
+ *
+ * State modification contract:
+ * - Source of truth: selected value is controlled by parent via `selected`.
+ * - Mutation path: `onSelect` callback emits selected option value.
+ * - Guard behavior: this component does not mutate local selection state.
+ */
 export function PillSelector<T extends string | number>(props: PillSelectorProps<T>): JSX.Element {
   return (
     <div class="pill-group" role="radiogroup" aria-label={props.ariaLabel}>
