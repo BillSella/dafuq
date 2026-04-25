@@ -79,8 +79,19 @@ import { useDismissOnOutsideClick } from "../../hooks/useDismissOnOutsideClick";
 import { fetchDashboardsFromServer, saveDashboardsToServer } from "../../dashboardServerSync";
 import { useDashboardRollback } from "../../dashboard/useDashboardRollback";
 import { useDashboardAutosave } from "../../dashboard/useDashboardAutosave";
-import { DashboardModule } from "./DashboardModule";
-import { NonDashboardModuleHost } from "../NonDashboardModuleHost";
+import {
+  DEBUG_WIDGET_EVENTS,
+  LIBRARY_WIDGET_KEY,
+  type DashboardWidget,
+  type SlideDirection,
+  WIDGET_SETTINGS_COLUMN_GAP,
+  WIDGET_SETTINGS_DIVIDER_WIDTH,
+  WIDGET_SETTINGS_LEFT_COLUMN_WIDTH,
+  WIDGET_SETTINGS_PANEL_CHROME,
+  WIDGET_SETTINGS_RIGHT_COLUMN_WIDTH,
+  widgetTypeIcon
+} from "./dashboardEditorConstants";
+import { DashboardMainRegion } from "./DashboardMainRegion";
 import { getAppModule } from "../moduleRegistry";
 import type { AppModuleId } from "../moduleTypes";
 import { WorkspaceShell } from "../shell/WorkspaceShell";
@@ -89,37 +100,6 @@ import { WorkspaceShell } from "../shell/WorkspaceShell";
  * Authenticated workspace: dashboard state and topbar wiring, hosted inside
  * {@link WorkspaceShell}. Re-exported as default from `App.tsx`.
  */
-type SlideDirection = "left" | "right" | "top" | "bottom";
-const LIBRARY_WIDGET_KEY = "application/x-dashboard-widget";
-type DashboardWidget = WidgetStateByType;
-const DEBUG_WIDGET_EVENTS = true;
-const WIDGET_SETTINGS_LEFT_COLUMN_WIDTH = 450;
-const WIDGET_SETTINGS_RIGHT_COLUMN_WIDTH = 840;
-const WIDGET_SETTINGS_DIVIDER_WIDTH = 1;
-const WIDGET_SETTINGS_COLUMN_GAP = 12;
-const WIDGET_SETTINGS_PANEL_CHROME = 32;
-
-function widgetTypeIcon(type: WidgetType): string {
-  switch (type) {
-    case "numberGauge":
-      return "◔";
-    case "label":
-      return "T";
-    case "donutChart":
-      return "◍";
-    case "barChart":
-      return "▤";
-    case "sparklineChart":
-      return "⤴";
-    case "timeSeriesChart":
-      return "⏱";
-    case "mapNetwork":
-      return "◎";
-    default:
-      return "•";
-  }
-}
-
 export default function DashboardApp() {
   const session = useSession();
   const initialDashboards = loadDashboardsFromStorage(BREAKPOINT_IDS);
@@ -1448,11 +1428,7 @@ export default function DashboardApp() {
         />
       )}
       main={() => (
-          <Show
-            when={activeNavTool() === "dashboards"}
-            fallback={<NonDashboardModuleHost moduleId={activeNavTool()} />}
-          >
-            <DashboardModule>
+          <DashboardMainRegion activeNavTool={activeNavTool}>
           <>
           <DashboardEditorPane
             gridShellRef={(el) => {
@@ -2268,8 +2244,7 @@ export default function DashboardApp() {
         )}
       </WidgetConfigOverlayShell>
           </>
-            </DashboardModule>
-          </Show>
+          </DashboardMainRegion>
       )}
       overlays={() => (
       <DashboardSettingsOverlay
