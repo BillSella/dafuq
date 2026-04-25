@@ -7,11 +7,32 @@ import {
   type DashboardDoc
 } from "./dashboardStore";
 
+/**
+ * LocalStorage persistence helpers for dashboard documents.
+ *
+ * State modification contract:
+ * - Source of truth: dashboard docs in caller state, mirrored to localStorage.
+ * - Mutation paths:
+ *   - `persistDashboardsToStorage` writes index + per-dashboard payloads.
+ *   - `clearPersistedDashboards` removes stored index and payloads.
+ * - Guard behavior:
+ *   - non-browser runtimes return defaults/no-op
+ *   - malformed storage payloads degrade to defaults
+ */
+
+/**
+ * Returns default dashboard list when no persisted data is available.
+ */
 export function createDefaultDashboards(breakpointIds: DashboardBreakpoint[]): DashboardDoc[] {
   void breakpointIds;
   return [];
 }
 
+/**
+ * Hydrates dashboard documents from localStorage and normalizes each document.
+ *
+ * Falls back to defaults on missing index or malformed payloads.
+ */
 export function loadDashboardsFromStorage(breakpointIds: DashboardBreakpoint[]): DashboardDoc[] {
   if (typeof window === "undefined") {
     return createDefaultDashboards(breakpointIds);
@@ -33,6 +54,9 @@ export function loadDashboardsFromStorage(breakpointIds: DashboardBreakpoint[]):
   }
 }
 
+/**
+ * Persists dashboard index and per-dashboard JSON payloads to localStorage.
+ */
 export function persistDashboardsToStorage(docs: DashboardDoc[]): void {
   if (typeof window === "undefined") return;
   try {
@@ -48,6 +72,9 @@ export function persistDashboardsToStorage(docs: DashboardDoc[]): void {
   }
 }
 
+/**
+ * Removes persisted dashboard index and document payload entries.
+ */
 export function clearPersistedDashboards(): void {
   if (typeof window === "undefined") return;
   try {

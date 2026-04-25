@@ -21,7 +21,9 @@ export default defineConfig({
         "src/components/layout/DashboardEditorPane.tsx",
         "src/components/layout/WidgetCanvas.tsx",
         "src/hooks/useDismissOnOutsideClick.ts",
-        "src/timeWindow.ts"
+        "src/timeWindow.ts",
+        "src/authToken.ts",
+        "src/dashboardPersistence.ts"
       ],
       exclude: [
         "src/main.tsx",

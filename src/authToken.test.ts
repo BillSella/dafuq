@@ -1,0 +1,57 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  captureOAuthTokensFromUrl,
+  clearAuthTokens,
+  getAccessToken,
+  getRefreshToken,
+  setAccessToken,
+  setRefreshToken
+} from "./authToken";
+
+afterEach(() => {
+  localStorage.clear();
+  window.history.replaceState(null, "", "/");
+});
+
+describe("authToken", () => {
+  it("sets, gets, and clears tokens", () => {
+    setAccessToken("access-1");
+    setRefreshToken("refresh-1");
+    expect(getAccessToken()).toBe("access-1");
+    expect(getRefreshToken()).toBe("refresh-1");
+
+    clearAuthTokens();
+    expect(getAccessToken()).toBeNull();
+    expect(getRefreshToken()).toBeNull();
+  });
+
+  it("captures OAuth tokens from URL hash and clears hash", () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/callback?x=1#access_token=abc&refresh_token=xyz&token_type=Bearer"
+    );
+
+    captureOAuthTokensFromUrl();
+
+    expect(getAccessToken()).toBe("abc");
+    expect(getRefreshToken()).toBe("xyz");
+    expect(window.location.hash).toBe("");
+    expect(window.location.pathname).toBe("/callback");
+    expect(window.location.search).toBe("?x=1");
+  });
+
+  it("does nothing when hash has no auth tokens", () => {
+    setAccessToken("existing-a");
+    setRefreshToken("existing-r");
+    window.history.replaceState(null, "", "/callback#state=ok");
+    const replaceSpy = vi.spyOn(window.history, "replaceState");
+
+    captureOAuthTokensFromUrl();
+
+    expect(getAccessToken()).toBe("existing-a");
+    expect(getRefreshToken()).toBe("existing-r");
+    expect(replaceSpy).not.toHaveBeenCalled();
+  });
+});
+

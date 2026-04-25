@@ -1,24 +1,48 @@
 const ACCESS = "dafuq_access_token";
 const REFRESH = "dafuq_refresh_token";
 
+/**
+ * OAuth token storage helpers for browser-based auth state.
+ *
+ * State modification contract:
+ * - Source of truth: token values in `window.localStorage`.
+ * - Mutation paths: `setAccessToken`, `setRefreshToken`, `clearAuthTokens`,
+ *   and `captureOAuthTokensFromUrl`.
+ * - Guard behavior: read helpers return `null` on non-browser runtimes.
+ */
+/**
+ * Reads the access token from localStorage.
+ */
 export function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
   return window.localStorage.getItem(ACCESS);
 }
 
+/**
+ * Reads the refresh token from localStorage.
+ */
 export function getRefreshToken(): string | null {
   if (typeof window === "undefined") return null;
   return window.localStorage.getItem(REFRESH);
 }
 
+/**
+ * Persists an access token into localStorage.
+ */
 export function setAccessToken(token: string) {
   window.localStorage.setItem(ACCESS, token);
 }
 
+/**
+ * Persists a refresh token into localStorage.
+ */
 export function setRefreshToken(token: string) {
   window.localStorage.setItem(REFRESH, token);
 }
 
+/**
+ * Removes both access and refresh tokens from localStorage.
+ */
 export function clearAuthTokens() {
   window.localStorage.removeItem(ACCESS);
   window.localStorage.removeItem(REFRESH);
