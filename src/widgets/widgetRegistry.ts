@@ -7,6 +7,17 @@ import { TimeSeriesWidget, type TimeSeriesConfig } from "./timeSeriesWidget";
 import { MapWidget, type MapConfig } from "./mapWidget";
 import type { WidgetState } from "./baseWidget";
 
+/**
+ * Widget registry mapping each widget type to normalized behavior adapters.
+ *
+ * State modification contract:
+ * - Source of truth: callers provide widget state/config inputs.
+ * - Mutation paths: `splitConfigPatch` partitions display vs global updates for
+ *   parent-owned dashboard state mutation flows.
+ * - Guard behavior: `getFetchSpec` and `getUpdateGroup` normalize missing config
+ *   values into safe defaults for orchestration layers.
+ */
+
 export type WidgetType =
   | "numberGauge"
   | "label"
