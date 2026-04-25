@@ -10,7 +10,6 @@ import { MAP_VIEW_H, MAP_VIEW_W } from "../../widgets/mapProjections";
 import { clamp } from "../../widgets/baseWidget";
 import {
   UPDATE_FREQUENCY_OPTIONS,
-  createDashboardDoc,
   type DashboardBreakpoint,
   type DashboardDoc,
   type DashboardWidgetDoc,
@@ -76,6 +75,7 @@ import { DashboardMainRegion } from "./DashboardMainRegion";
 import { DashboardEditorGrid } from "./DashboardEditorGrid";
 import { DashboardWidgetCard } from "./DashboardWidgetCard";
 import { DashboardWidgetConfigOverlay } from "./DashboardWidgetConfigOverlay";
+import { useDashboardManagement } from "./useDashboardManagement";
 import { useDashboardRuntimeValues } from "./useDashboardRuntimeValues";
 import { useDashboardTopbarTimeWindow } from "./useDashboardTopbarTimeWindow";
 import { getAppModule } from "../moduleRegistry";
@@ -183,16 +183,47 @@ export default function DashboardApp() {
   const activeDashboardDoc = createMemo(
     () => dashboards().find((dashboard) => dashboard.id === activeDashboardId()) ?? null
   );
+  const selectedGridSpec = createMemo(() =>
+    getGridSizeForBreakpoint(selectedBreakpoint(), gridViewportWidth(), gridViewportHeight())
+  );
+  const baseRows = createMemo(() => selectedGridSpec().rows);
+  const dashboardManagement = useDashboardManagement({
+    dashboards,
+    setDashboards,
+    activeDashboardId,
+    setActiveDashboardId,
+    activeDashboardDoc,
+    dashboardLocked,
+    setDashboardLocked,
+    selectedBreakpoint,
+    setSelectedBreakpoint,
+    setHasManualBreakpointSelection,
+    setDashboardMenuOpen,
+    setDashboardSettingsOpen,
+    setDashboardDeleteConfirmInput,
+    baseRows,
+    dashboardSettingsOpen,
+    dashboardSettingsWidth,
+    dashboardSettingsHeight,
+    gridRef: () => gridRef,
+    setDashboardSettingsLeft,
+    setDashboardSettingsTop
+  });
+  const {
+    createDashboard,
+    renameActiveDashboard,
+    setDashboardBreakpointEnabled,
+    updateActiveDashboardFrequencyByIndex,
+    deleteActiveDashboard,
+    addGridPage,
+    updateDashboardSettingsPlacement
+  } = dashboardManagement;
   const runtime = useDashboardRuntimeValues({
     activeNavTool,
     activeDashboardDoc,
     timeWindow
   });
   const { runtimeWidgetValues, runtimeWidgetStatus } = runtime;
-  const selectedGridSpec = createMemo(() =>
-    getGridSizeForBreakpoint(selectedBreakpoint(), gridViewportWidth(), gridViewportHeight())
-  );
-  const baseRows = createMemo(() => selectedGridSpec().rows);
   const extraRowsForSelectedBreakpoint = createMemo(() => {
     const active = activeDashboardDoc();
     if (!active) return 0;
@@ -394,109 +425,6 @@ export default function DashboardApp() {
     console.debug(`[widget-debug] ${eventName}`);
   };
 
-  const createDashboard = () => {
-    const existing = dashboards().map((dashboard) => dashboard.name);
-    let nextIndex = existing.length + 1;
-    let candidate = `Dashboard ${nextIndex}`;
-    const existingSet = new Set(existing);
-    while (existingSet.has(candidate)) {
-      nextIndex += 1;
-      candidate = `Dashboard ${nextIndex}`;
-    }
-    const nextDashboard = createDashboardDoc(candidate, false, BREAKPOINT_IDS);
-    setDashboards((previous) => [...previous, nextDashboard]);
-    setActiveDashboardId(nextDashboard.id);
-    setSelectedBreakpoint("desktopFhd");
-    setHasManualBreakpointSelection(true);
-    setDashboardLocked(false);
-    setDashboardMenuOpen(false);
-    setDashboardSettingsOpen(true);
-    queueMicrotask(updateDashboardSettingsPlacement);
-  };
-
-  const renameActiveDashboard = (nextName: string) => {
-    const currentId = activeDashboardId();
-    setDashboards((previous) =>
-      previous.map((dashboard) =>
-        dashboard.id === currentId ? { ...dashboard, name: nextName } : dashboard
-      )
-    );
-  };
-
-  const setDashboardBreakpointEnabled = (breakpoint: DashboardBreakpoint, enabled: boolean) => {
-    if (dashboardLocked()) return;
-    const currentDashboardId = activeDashboardId();
-    if (!currentDashboardId) return;
-    const active = activeDashboardDoc();
-    if (!active) return;
-    const currentlyEnabled = BREAKPOINT_OPTIONS.filter(
-      (option) => active.enabledBreakpoints?.[option.id] ?? true
-    );
-    if (!enabled && currentlyEnabled.length <= 1 && currentlyEnabled[0]?.id === breakpoint) {
-      return;
-    }
-    setDashboards((previous) =>
-      previous.map((dashboard) =>
-        dashboard.id === currentDashboardId
-          ? {
-              ...dashboard,
-              enabledBreakpoints: {
-                ...dashboard.enabledBreakpoints,
-                [breakpoint]: enabled
-              }
-            }
-          : dashboard
-      )
-    );
-    if (!enabled && selectedBreakpoint() === breakpoint) {
-      const fallback =
-        (BREAKPOINT_OPTIONS.find(
-          (option) =>
-            option.id === "desktopFhd" &&
-            option.id !== breakpoint &&
-            (active.enabledBreakpoints?.[option.id] ?? true)
-        )?.id ??
-          BREAKPOINT_OPTIONS.find(
-            (option) =>
-              option.id !== breakpoint && (active.enabledBreakpoints?.[option.id] ?? true)
-          )?.id ??
-          BREAKPOINT_OPTIONS[0].id) as DashboardBreakpoint;
-      setSelectedBreakpoint(fallback);
-      setHasManualBreakpointSelection(true);
-    }
-  };
-
-  const updateActiveDashboardFrequencyByIndex = (nextIndex: number) => {
-    const currentId = activeDashboardId();
-    const clampedIndex = clamp(nextIndex, 0, UPDATE_FREQUENCY_OPTIONS.length - 1);
-    const snapped = UPDATE_FREQUENCY_OPTIONS[clampedIndex] ?? UPDATE_FREQUENCY_OPTIONS[0];
-    setDashboards((previous) =>
-      previous.map((dashboard) =>
-        dashboard.id === currentId
-          ? { ...dashboard, updateFrequencySeconds: snapped }
-          : dashboard
-      )
-    );
-  };
-
-  const deleteActiveDashboard = () => {
-    const currentId = activeDashboardId();
-    const remaining = dashboards().filter((dashboard) => dashboard.id !== currentId);
-    if (remaining.length === 0) {
-      const fallback = createDashboardDoc("Dashboard 1", false, BREAKPOINT_IDS);
-      setDashboards([fallback]);
-      setActiveDashboardId(fallback.id);
-      setSelectedBreakpoint("desktopFhd");
-      setHasManualBreakpointSelection(true);
-    } else {
-      setDashboards(remaining);
-      setActiveDashboardId(remaining[0].id);
-    }
-    setDashboardLocked(true);
-    setDashboardDeleteConfirmInput("");
-    setDashboardSettingsOpen(false);
-  };
-
   const addWidgetFromMenu = (type: WidgetType) => {
     const count = widgets().length;
     const footprint = getWidgetFootprintForCurrentGrid(type);
@@ -506,47 +434,6 @@ export default function DashboardApp() {
     const row = 1 + Math.floor(count / 2) * (footprint.rowSpan + gapUnits);
     addWidgetAt(type, col, row);
     setWidgetMenuOpen(false);
-  };
-
-  const addGridPage = () => {
-    if (dashboardLocked()) return;
-    const currentDashboardId = activeDashboardId();
-    const currentBreakpoint = selectedBreakpoint();
-    const pageRows = baseRows();
-    setDashboards((previous) =>
-      previous.map((dashboard) =>
-        dashboard.id === currentDashboardId
-          ? {
-              ...dashboard,
-              extraGridRows: {
-                ...dashboard.extraGridRows,
-                [currentBreakpoint]: (dashboard.extraGridRows?.[currentBreakpoint] ?? 0) + pageRows
-              }
-            }
-          : dashboard
-      )
-    );
-  };
-
-  const updateDashboardSettingsPlacement = () => {
-    if (!dashboardSettingsOpen()) return;
-    if (!gridRef) return;
-    const panelWidth = dashboardSettingsWidth();
-    const panelHeight = dashboardSettingsHeight();
-    const margin = 12;
-    const gridRect = gridRef.getBoundingClientRect();
-    const centeredLeft = clamp(
-      gridRect.left + gridRect.width / 2 - panelWidth / 2,
-      margin,
-      window.innerWidth - panelWidth - margin
-    );
-    const centeredTop = clamp(
-      gridRect.top + gridRect.height / 2 - panelHeight / 2,
-      margin,
-      window.innerHeight - panelHeight - margin
-    );
-    setDashboardSettingsLeft(centeredLeft);
-    setDashboardSettingsTop(centeredTop);
   };
 
   const updateWidget = (id: string, patch: WidgetPatch) => {
