@@ -1,5 +1,13 @@
 import { BaseWidget, type WidgetState } from "./baseWidget";
 
+/**
+ * Shared parsing and numeric-formatting helpers for chart-like widgets.
+ *
+ * State modification contract:
+ * - Extends immutable `BaseWidget` without owning external state.
+ * - Parses `defaultValue` payloads into normalized numeric series snapshots.
+ * - Provides deterministic number formatting for compact/full display modes.
+ */
 export type NumberFormat = "full" | "compact";
 
 export type ParsedChartDatum = {
