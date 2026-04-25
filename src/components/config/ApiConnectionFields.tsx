@@ -11,6 +11,15 @@ type ApiConnectionFieldsProps = {
   onUpdateGroupChange: (value: string) => void;
 };
 
+/**
+ * Shared endpoint/update-group input fields for API-backed widgets.
+ *
+ * State modification contract:
+ * - Source of truth: input values are parent-controlled props.
+ * - Mutation paths: emits edits via `onEndpointUrlChange` and
+ *   `onUpdateGroupChange`.
+ * - Guard behavior: datalist suggestions render only when options exist.
+ */
 export function ApiConnectionFields(props: ApiConnectionFieldsProps) {
   const listId = props.updateGroupListId ?? "widget-update-group-options";
   const hasOptions = (props.updateGroupOptions?.length ?? 0) > 0;
