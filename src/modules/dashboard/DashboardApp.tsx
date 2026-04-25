@@ -54,14 +54,9 @@ import { fetchWidgetRuntimeValue, getWidgetGroupKey } from "../../widgetDataServ
 import type { WidgetRuntimeStatus } from "../../widgetDataService";
 import {
   RELATIVE_PRESETS,
-  fromDateTimeLocalValue,
-  loadTimeWindowFromStorage,
   resolveTimeRange,
-  saveTimeWindowToStorage,
   timeWindowButtonLabel,
-  timeWindowSummaryLabel,
-  toDateTimeLocalValue,
-  type TimeWindowState
+  timeWindowSummaryLabel
 } from "../../timeWindow";
 import { useSession } from "../../session/SessionContext";
 import { useDismissOnOutsideClick } from "../../hooks/useDismissOnOutsideClick";
@@ -84,6 +79,7 @@ import { DashboardMainRegion } from "./DashboardMainRegion";
 import { DashboardEditorGrid } from "./DashboardEditorGrid";
 import { DashboardWidgetCard } from "./DashboardWidgetCard";
 import { DashboardWidgetConfigOverlay } from "./DashboardWidgetConfigOverlay";
+import { useDashboardTopbarTimeWindow } from "./useDashboardTopbarTimeWindow";
 import { getAppModule } from "../moduleRegistry";
 import type { AppModuleId } from "../moduleTypes";
 import { WorkspaceShell } from "../shell/WorkspaceShell";
@@ -118,11 +114,24 @@ export default function DashboardApp() {
   const [debugCounts, setDebugCounts] = createSignal<Record<string, number>>({});
   const [activeNavTool, setActiveNavTool] = createSignal<AppModuleId>("dashboards");
   const [userMenuOpen, setUserMenuOpen] = createSignal(false);
-  const [timeWindow, setTimeWindow] = createSignal<TimeWindowState>(loadTimeWindowFromStorage());
-  const [timeWindowMenuOpen, setTimeWindowMenuOpen] = createSignal(false);
-  const [timeWindowMenuView, setTimeWindowMenuView] = createSignal<"list" | "custom">("list");
-  const [customRangeFrom, setCustomRangeFrom] = createSignal("");
-  const [customRangeTo, setCustomRangeTo] = createSignal("");
+  const topbarTime = useDashboardTopbarTimeWindow();
+  const {
+    timeWindow,
+    timeWindowMenuOpen,
+    timeWindowMenuView,
+    customRangeFrom,
+    customRangeTo,
+    currentClock,
+    currentClockIso,
+    topbarCustomTimeSpan,
+    setTimeWindowMenuOpen,
+    setTimeWindowMenuView,
+    setCustomRangeFrom,
+    setCustomRangeTo,
+    applyTimeWindow,
+    openTimeWindowCustom,
+    applyTimeWindowCustom
+  } = topbarTime;
   const [serverSyncReady, setServerSyncReady] = createSignal(false);
   const [dashboardMenuOpen, setDashboardMenuOpen] = createSignal(false);
   const [dashboardLocked, setDashboardLocked] = createSignal(true);
@@ -382,65 +391,6 @@ export default function DashboardApp() {
     }
     console.debug(`[widget-debug] ${eventName}`);
   };
-
-  const applyTimeWindow = (next: TimeWindowState) => {
-    setTimeWindow(next);
-    saveTimeWindowToStorage(next);
-    setTimeWindowMenuOpen(false);
-    setTimeWindowMenuView("list");
-  };
-
-  const openTimeWindowCustom = () => {
-    const tw = timeWindow();
-    if (tw.kind === "absolute") {
-      setCustomRangeFrom(toDateTimeLocalValue(tw.fromMs));
-      setCustomRangeTo(toDateTimeLocalValue(tw.toMs));
-    } else {
-      const r = resolveTimeRange(tw);
-      setCustomRangeFrom(toDateTimeLocalValue(r.fromMs));
-      setCustomRangeTo(toDateTimeLocalValue(r.toMs));
-    }
-    setTimeWindowMenuView("custom");
-  };
-
-  const applyTimeWindowCustom = () => {
-    let a = fromDateTimeLocalValue(customRangeFrom());
-    let b = fromDateTimeLocalValue(customRangeTo());
-    if (a == null || b == null) return;
-    if (a === b) b = a + 60_000;
-    applyTimeWindow({ kind: "absolute", fromMs: Math.min(a, b), toMs: Math.max(a, b) });
-  };
-
-  const formatLocalClock = () =>
-    new Date().toLocaleTimeString(undefined, {
-      hour: "numeric",
-      minute: "2-digit",
-      second: "2-digit"
-    });
-  const formatTopbarRangePoint = (ms: number) =>
-    new Date(ms).toLocaleString(undefined, {
-      year: "numeric",
-      month: "numeric",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit"
-    });
-  const [currentClock, setCurrentClock] = createSignal(formatLocalClock());
-  const currentClockIso = createMemo(() => {
-    currentClock();
-    return new Date().toISOString();
-  });
-  const topbarCustomTimeSpan = createMemo(() => {
-    const tw = timeWindow();
-    if (tw.kind !== "absolute") return "";
-    const { fromMs, toMs } = resolveTimeRange(tw);
-    return `${formatTopbarRangePoint(fromMs)} - ${formatTopbarRangePoint(toMs)}`;
-  });
-  createEffect(() => {
-    setCurrentClock(formatLocalClock());
-    const t = window.setInterval(() => setCurrentClock(formatLocalClock()), 1000);
-    onCleanup(() => clearInterval(t));
-  });
 
   const createDashboard = () => {
     const existing = dashboards().map((dashboard) => dashboard.name);
