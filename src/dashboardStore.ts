@@ -94,6 +94,13 @@ export function makeDashboardStorageKey(id: string): string {
   return `dashboard:${id}.json`;
 }
 
+/**
+ * Creates a new dashboard document with breakpoint defaults.
+ *
+ * State modification contract:
+ * - Returns a standalone immutable document object.
+ * - Optionally seeds a default gauge widget across all breakpoints.
+ */
 export function createDashboardDoc(
   name: string,
   includeDefaultWidget: boolean,
@@ -165,6 +172,14 @@ function coerceBreakpointId(raw: string): DashboardBreakpoint | null {
   return LEGACY_BREAKPOINT_ALIASES[raw] ?? null;
 }
 
+/**
+ * Migrates persisted dashboards into the current breakpoint schema.
+ *
+ * Significant decisions:
+ * - Legacy breakpoint aliases are mapped into the current ids.
+ * - Missing per-breakpoint placement/display entries are backfilled.
+ * - Update frequency is clamped to supported option bounds.
+ */
 export function normalizeDashboardDoc(
   doc: DashboardDoc,
   breakpointIds: DashboardBreakpoint[]
@@ -358,6 +373,13 @@ export function upsertWidgetDisplayConfig(
   return widget.display.map((entry) => (entry.breakpoint === breakpoint ? nextEntry : entry));
 }
 
+/**
+ * Applies an immutable placement patch to one widget in one dashboard.
+ *
+ * State modification API:
+ * - Source collection is unchanged for non-target dashboards/widgets.
+ * - Target placement is upserted for the requested breakpoint.
+ */
 export function updateWidgetInDashboards(
   dashboards: DashboardDoc[],
   dashboardId: string,
@@ -389,6 +411,13 @@ export function updateWidgetInDashboards(
   });
 }
 
+/**
+ * Applies config edits to one widget by splitting global vs display settings.
+ *
+ * State modification API:
+ * - Global config keys update `widget.config`.
+ * - Presentation keys update breakpoint-scoped `widget.display`.
+ */
 export function updateWidgetConfigInDashboards(
   dashboards: DashboardDoc[],
   dashboardId: string,
@@ -421,6 +450,9 @@ export function updateWidgetConfigInDashboards(
   });
 }
 
+/**
+ * Toggles breakpoint-specific visibility for a widget placement.
+ */
 export function updateWidgetVisibilityInDashboards(
   dashboards: DashboardDoc[],
   dashboardId: string,
@@ -448,6 +480,9 @@ export function updateWidgetVisibilityInDashboards(
   });
 }
 
+/**
+ * Removes a widget from a specific dashboard document.
+ */
 export function deleteWidgetInDashboards(
   dashboards: DashboardDoc[],
   dashboardId: string,
@@ -460,6 +495,13 @@ export function deleteWidgetInDashboards(
   );
 }
 
+/**
+ * Clamps all widget placements so they fit inside a resized grid.
+ *
+ * Guard behavior:
+ * - Uses widget-type specific grid clamping from the registry first.
+ * - Final start coordinates are bounded into valid grid coordinates.
+ */
 export function ensureWidgetsFitGridInDashboards(
   dashboards: DashboardDoc[],
   dashboardId: string,

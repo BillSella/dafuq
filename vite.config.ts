@@ -29,6 +29,7 @@ export default defineConfig({
         "src/timeWindow.ts",
         "src/authToken.ts",
         "src/dashboardPersistence.ts",
+        "src/dashboardStore.ts",
         "src/layoutService.ts",
         "src/session/SessionContext.tsx",
         "src/dashboardServerSync.ts",
