@@ -23,6 +23,7 @@ export default defineConfig({
         "src/components/config/WidgetVisibilityField.tsx",
         "src/components/config/OverlayPanel.tsx",
         "src/components/config/WidgetConfigOverlayShell.tsx",
+        "src/components/config/DashboardSettingsOverlay.tsx",
         "src/components/layout/LeftNavRail.tsx",
         "src/components/layout/AppTopbarTools.tsx",
         "src/components/layout/AppTopbarCenter.tsx",

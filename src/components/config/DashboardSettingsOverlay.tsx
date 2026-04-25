@@ -18,6 +18,16 @@ type DashboardSettingsOverlayProps = {
   onDelete: () => void;
 };
 
+/**
+ * Dashboard-level settings overlay for rename, refresh cadence, and delete.
+ *
+ * State modification contract:
+ * - Source of truth: all form values are controlled by parent props.
+ * - Mutation paths: emits changes through `onRename`, `onFrequencyIndexChange`,
+ *   `onDeleteConfirmInputChange`, and `onDelete`.
+ * - Guard behavior: delete action remains disabled until confirmation text
+ *   exactly matches the dashboard name.
+ */
 export function DashboardSettingsOverlay(props: DashboardSettingsOverlayProps): JSX.Element {
   const selectedFrequencyIndex = () =>
     Math.max(0, props.frequencyOptions.indexOf(props.updateFrequencySeconds as (typeof props.frequencyOptions)[number]));
