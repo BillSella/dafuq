@@ -7,6 +7,16 @@ type UseDismissOnOutsideClickOptions = {
   onDismiss: () => void;
 };
 
+/**
+ * Registers escape/outside-pointer dismissal while an overlay is open.
+ *
+ * State modification contract:
+ * - Source of truth for open state is the caller-provided accessor.
+ * - Mutation path is `onDismiss`, invoked on eligible dismiss interactions.
+ * - Guard rules:
+ *   - no listeners are attached while closed
+ *   - interactions inside container/trigger do not dismiss
+ */
 export function useDismissOnOutsideClick(options: UseDismissOnOutsideClickOptions) {
   createEffect(() => {
     if (!options.isOpen()) return;

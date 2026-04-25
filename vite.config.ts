@@ -13,11 +13,14 @@ export default defineConfig({
       reportsDirectory: "./coverage",
       include: [
         "src/components/ui/NavToolButton.tsx",
+        "src/components/ui/ToolButton.tsx",
+        "src/components/ui/MenuDropdown.tsx",
         "src/components/layout/LeftNavRail.tsx",
         "src/components/layout/AppTopbarTools.tsx",
         "src/components/layout/AppTopbarCenter.tsx",
         "src/components/layout/DashboardEditorPane.tsx",
-        "src/components/layout/WidgetCanvas.tsx"
+        "src/components/layout/WidgetCanvas.tsx",
+        "src/hooks/useDismissOnOutsideClick.ts"
       ],
       exclude: [
         "src/main.tsx",
