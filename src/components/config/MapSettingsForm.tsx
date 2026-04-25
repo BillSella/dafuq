@@ -12,6 +12,14 @@ type MapSettingsFormProps = {
   baseSettings: JSX.Element;
 };
 
+/**
+ * Map-network configuration form for region, curve, and API bindings.
+ *
+ * State modification contract:
+ * - Source of truth: parent-managed `config`.
+ * - Mutation path: emits partial map config updates via `onPatch`.
+ * - Shared base display controls are injected through `baseSettings`.
+ */
 export function MapSettingsForm(props: MapSettingsFormProps) {
   return (
     <>

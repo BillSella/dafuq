@@ -13,6 +13,14 @@ type SparklineSettingsFormProps = {
   baseSettings: JSX.Element;
 };
 
+/**
+ * Sparkline chart configuration form combining shared and chart-specific fields.
+ *
+ * State modification contract:
+ * - Source of truth: parent-owned `config`.
+ * - Mutation path: emits partial sparkline updates via `onPatch`.
+ * - Reuses shared formatting/toggle/API field primitives.
+ */
 export function SparklineSettingsForm(props: SparklineSettingsFormProps) {
   return (
     <>

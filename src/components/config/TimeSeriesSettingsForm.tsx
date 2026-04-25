@@ -13,6 +13,14 @@ type TimeSeriesSettingsFormProps = {
   baseSettings: JSX.Element;
 };
 
+/**
+ * Time-series chart configuration form with stacking/grid/fill controls.
+ *
+ * State modification contract:
+ * - Source of truth: parent-controlled `config`.
+ * - Mutation path: emits partial time-series config patches through `onPatch`.
+ * - Composes shared format, toggle, and API settings controls.
+ */
 export function TimeSeriesSettingsForm(props: TimeSeriesSettingsFormProps) {
   return (
     <>
