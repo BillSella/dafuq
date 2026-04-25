@@ -12,6 +12,7 @@ export default defineConfig({
       reporter: ["text", "html", "json-summary"],
       reportsDirectory: "./coverage",
       include: [
+        "src/AppAuthGate.tsx",
         "src/components/ui/NavToolButton.tsx",
         "src/components/ui/ToolButton.tsx",
         "src/components/ui/MenuDropdown.tsx",
@@ -19,6 +20,7 @@ export default defineConfig({
         "src/components/layout/AppTopbarTools.tsx",
         "src/components/layout/AppTopbarCenter.tsx",
         "src/components/layout/DashboardEditorPane.tsx",
+        "src/components/layout/DashboardPlaceholderPane.tsx",
         "src/components/layout/WidgetCanvas.tsx",
         "src/hooks/useDismissOnOutsideClick.ts",
         "src/timeWindow.ts",
