@@ -11,6 +11,17 @@ import type { BarConfig } from "./widgets/barWidget";
 import type { SparklineConfig } from "./widgets/sparklineWidget";
 import type { TimeSeriesConfig } from "./widgets/timeSeriesWidget";
 
+/**
+ * Dashboard document model and pure update utilities.
+ *
+ * State modification contract:
+ * - Source of truth: caller-owned `DashboardDoc[]` collections.
+ * - Mutation style: all update helpers are immutable transforms that return
+ *   new dashboard arrays/documents.
+ * - Guard behavior: placement/display helpers provide safe fallbacks when
+ *   requested breakpoint data is missing.
+ */
+
 export type DashboardBreakpoint =
   | "mobilePortrait"
   | "mobileLandscape"
@@ -76,6 +87,9 @@ export type WidgetPatch = Partial<
   Pick<{ colStart: number; rowStart: number; colSpan: number; rowSpan: number }, "colStart" | "rowStart" | "colSpan" | "rowSpan">
 >;
 
+/**
+ * Returns the localStorage key used for an individual dashboard document.
+ */
 export function makeDashboardStorageKey(id: string): string {
   return `dashboard:${id}.json`;
 }
@@ -256,6 +270,9 @@ export function normalizeDashboardDoc(
   };
 }
 
+/**
+ * Reads a widget placement for a breakpoint with safe fallback defaults.
+ */
 export function getWidgetPlacement(
   widget: DashboardWidgetDoc,
   breakpoint: DashboardBreakpoint
@@ -276,6 +293,9 @@ export function getWidgetPlacement(
   };
 }
 
+/**
+ * Inserts or replaces a widget placement for the specified breakpoint.
+ */
 export function upsertWidgetPlacement(
   widget: DashboardWidgetDoc,
   breakpoint: DashboardBreakpoint,
@@ -290,6 +310,9 @@ export function upsertWidgetPlacement(
   );
 }
 
+/**
+ * Reads display config for a breakpoint or falls back to registry defaults.
+ */
 export function getWidgetDisplayConfig(
   widget: DashboardWidgetDoc,
   breakpoint: DashboardBreakpoint
@@ -321,6 +344,9 @@ export function getWidgetDisplayConfig(
   };
 }
 
+/**
+ * Inserts or replaces display config for the specified breakpoint.
+ */
 export function upsertWidgetDisplayConfig(
   widget: DashboardWidgetDoc,
   breakpoint: DashboardBreakpoint,
