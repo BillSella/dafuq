@@ -26,6 +26,19 @@ type DashboardEditorPaneProps = {
   children: JSX.Element;
 };
 
+/**
+ * Grid host pane that renders the dashboard canvas shell and drop preview.
+ *
+ * State modification contract:
+ * - Source of truth: parent orchestrator owns all grid geometry and lock state.
+ * - Allowed mutation paths: drag/drop event callbacks passed via props.
+ * - Guard behavior: lock/show-grid policy is expressed through class state only;
+ *   this component does not mutate app state directly.
+ *
+ * Significant decision:
+ * - The drop ghost is rendered inside the grid host so pointer geometry and visual
+ *   positioning share the same sizing model as placed widgets.
+ */
 export function DashboardEditorPane(props: DashboardEditorPaneProps) {
   return (
     <div class="dashboard-editor">

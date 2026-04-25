@@ -15,7 +15,9 @@ export default defineConfig({
         "src/components/ui/NavToolButton.tsx",
         "src/components/layout/LeftNavRail.tsx",
         "src/components/layout/AppTopbarTools.tsx",
-        "src/components/layout/AppTopbarCenter.tsx"
+        "src/components/layout/AppTopbarCenter.tsx",
+        "src/components/layout/DashboardEditorPane.tsx",
+        "src/components/layout/WidgetCanvas.tsx"
       ],
       exclude: [
         "src/main.tsx",
