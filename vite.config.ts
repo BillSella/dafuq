@@ -50,7 +50,8 @@ export default defineConfig({
         "src/layoutService.ts",
         "src/session/SessionContext.tsx",
         "src/dashboardServerSync.ts",
-        "src/dashboard/useDashboardRollback.ts"
+        "src/dashboard/useDashboardRollback.ts",
+        "src/dashboard/useDashboardAutosave.ts"
       ],
       exclude: [
         "src/main.tsx",

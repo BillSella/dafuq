@@ -81,6 +81,7 @@ import { useSession } from "./session/SessionContext";
 import { useDismissOnOutsideClick } from "./hooks/useDismissOnOutsideClick";
 import { fetchDashboardsFromServer, saveDashboardsToServer } from "./dashboardServerSync";
 import { useDashboardRollback } from "./dashboard/useDashboardRollback";
+import { useDashboardAutosave } from "./dashboard/useDashboardAutosave";
 
 /**
  * Dashboard editor shell:
@@ -1289,32 +1290,12 @@ function App() {
     previousStep = currentStep;
   });
 
-  let dashboardServerSaveTimer: number | undefined;
-  createEffect(() => {
-    const docs = dashboards();
-    persistDashboardsToStorage(docs);
-    if (!serverSyncReady()) {
-      return;
-    }
-    if (!session.isAuthenticated()) {
-      if (dashboardServerSaveTimer !== undefined) {
-        window.clearTimeout(dashboardServerSaveTimer);
-        dashboardServerSaveTimer = undefined;
-      }
-      return;
-    }
-    if (dashboardServerSaveTimer !== undefined) {
-      window.clearTimeout(dashboardServerSaveTimer);
-    }
-    dashboardServerSaveTimer = window.setTimeout(() => {
-      dashboardServerSaveTimer = undefined;
-      void saveDashboardsToServer(docs);
-    }, 1200);
-  });
-  onCleanup(() => {
-    if (dashboardServerSaveTimer !== undefined) {
-      window.clearTimeout(dashboardServerSaveTimer);
-    }
+  useDashboardAutosave({
+    dashboards,
+    serverSyncReady,
+    isAuthenticated: session.isAuthenticated,
+    persistToStorage: persistDashboardsToStorage,
+    saveToServer: saveDashboardsToServer
   });
 
   onMount(() => {
