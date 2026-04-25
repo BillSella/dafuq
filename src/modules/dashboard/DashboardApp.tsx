@@ -49,8 +49,6 @@ import { BaseWidgetSettingsSection } from "../../components/config/BaseWidgetSet
 import { DashboardSettingsOverlay } from "../../components/config/DashboardSettingsOverlay";
 import { AppTopbarCenter } from "../../components/layout/AppTopbarCenter";
 import { AppTopbarTools } from "../../components/layout/AppTopbarTools";
-import { DashboardEditorPane } from "../../components/layout/DashboardEditorPane";
-import { WidgetCanvas } from "../../components/layout/WidgetCanvas";
 import { ToolButton } from "../../components/ui/ToolButton";
 import { fetchWidgetRuntimeValue, getWidgetGroupKey } from "../../widgetDataService";
 import type { WidgetRuntimeStatus } from "../../widgetDataService";
@@ -83,6 +81,7 @@ import {
   widgetTypeIcon
 } from "./dashboardEditorConstants";
 import { DashboardMainRegion } from "./DashboardMainRegion";
+import { DashboardEditorGrid } from "./DashboardEditorGrid";
 import { DashboardWidgetConfigOverlay } from "./DashboardWidgetConfigOverlay";
 import { getAppModule } from "../moduleRegistry";
 import type { AppModuleId } from "../moduleTypes";
@@ -1422,7 +1421,7 @@ export default function DashboardApp() {
       main={() => (
           <DashboardMainRegion activeNavTool={activeNavTool}>
           <>
-          <DashboardEditorPane
+          <DashboardEditorGrid
             gridShellRef={(el) => {
               gridShellRef = el;
             }}
@@ -1455,10 +1454,8 @@ export default function DashboardApp() {
                   }
                 : null
             }
-          >
-            <WidgetCanvas
-              items={widgets()}
-              renderItem={(widget) => {
+            items={widgets()}
+            renderItem={(widget) => {
                 const valueText = createMemo(() => getWidgetDisplayValue(widget));
                 const isGauge = () => widget.type === "numberGauge";
                 const isDonut = () => widget.type === "donutChart";
@@ -2033,9 +2030,8 @@ export default function DashboardApp() {
                     </button>
                   </div>
                 );
-              }}
-            />
-          </DashboardEditorPane>
+            }}
+          />
 
       <DashboardWidgetConfigOverlay
         panelRef={(el) => {
