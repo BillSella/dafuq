@@ -1,6 +1,15 @@
 import { clamp } from "./widgets/baseWidget";
 import type { DashboardBreakpoint, WidgetPlacement } from "./dashboardStore";
 
+/**
+ * Breakpoint/grid projection helpers for responsive dashboard layouts.
+ *
+ * State modification contract:
+ * - This module is pure and does not own mutable state.
+ * - Callers provide viewport/placement inputs and receive derived layout outputs.
+ * - Guard behavior: geometry outputs are clamped to valid target grid bounds.
+ */
+
 export const BREAKPOINT_OPTIONS: Array<{
   id: DashboardBreakpoint;
   label: string;
@@ -31,6 +40,9 @@ export const BREAKPOINT_TARGET_GRID: Record<DashboardBreakpoint, { columns: numb
 
 export const BREAKPOINT_IDS = BREAKPOINT_OPTIONS.map((option) => option.id);
 
+/**
+ * Resolves grid dimensions and cell step for a breakpoint and viewport.
+ */
 export function getGridSizeForBreakpoint(
   breakpoint: DashboardBreakpoint,
   viewportWidth: number,
@@ -47,6 +59,9 @@ export function getGridSizeForBreakpoint(
   };
 }
 
+/**
+ * Detects the closest breakpoint id from current viewport size.
+ */
 export function detectBreakpointFromViewport(width: number, height: number): DashboardBreakpoint {
   if (width >= 7680) return "uhd8k";
   if (width >= 3840) return "uhd4k";
@@ -57,6 +72,11 @@ export function detectBreakpointFromViewport(width: number, height: number): Das
   return width >= height ? "mobileLandscape" : "mobilePortrait";
 }
 
+/**
+ * Projects a widget placement from the active breakpoint across all breakpoints.
+ *
+ * Preserves the active breakpoint placement exactly and scales/clamps others.
+ */
 export function projectPlacementAcrossBreakpoints(
   currentBreakpoint: DashboardBreakpoint,
   placement: Pick<WidgetPlacement, "colStart" | "rowStart" | "colSpan" | "rowSpan">,

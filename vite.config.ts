@@ -23,7 +23,8 @@ export default defineConfig({
         "src/hooks/useDismissOnOutsideClick.ts",
         "src/timeWindow.ts",
         "src/authToken.ts",
-        "src/dashboardPersistence.ts"
+        "src/dashboardPersistence.ts",
+        "src/layoutService.ts"
       ],
       exclude: [
         "src/main.tsx",
