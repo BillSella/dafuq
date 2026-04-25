@@ -28,7 +28,8 @@ export default defineConfig({
         "src/authToken.ts",
         "src/dashboardPersistence.ts",
         "src/layoutService.ts",
-        "src/session/SessionContext.tsx"
+        "src/session/SessionContext.tsx",
+        "src/dashboardServerSync.ts"
       ],
       exclude: [
         "src/main.tsx",

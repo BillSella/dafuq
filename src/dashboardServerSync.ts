@@ -10,6 +10,19 @@ type DashboardsEnvelope = {
   dashboards: unknown[];
 };
 
+/**
+ * Server sync helpers for dashboard CRUD/rollback endpoints.
+ *
+ * State modification contract:
+ * - Source of truth: server-side dashboard documents accessed via `/api/v1/dashboards*`.
+ * - Mutation paths:
+ *   - `saveDashboardsToServer` persists full dashboard envelope.
+ *   - `rollbackDashboardToVersion` requests server-side rollback and returns normalized doc.
+ * - Guard behavior:
+ *   - all operations short-circuit when no access token is available
+ *   - invalid or non-OK responses return `null`/`false` instead of throwing
+ */
+
 const apiPath = "/api/v1/dashboards";
 const versionsApiPath = (dashboardId: string) =>
   `/api/v1/dashboards/${encodeURIComponent(dashboardId)}/versions`;
@@ -78,6 +91,9 @@ export async function fetchDashboardVersionsFromServer(dashboardId: string): Pro
     .slice(0, 10);
 }
 
+/**
+ * Requests rollback to a historical dashboard snapshot and normalizes the response.
+ */
 export async function rollbackDashboardToVersion(
   dashboardId: string,
   timestamp: string,
