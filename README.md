@@ -109,6 +109,13 @@ src/              # SolidJS app: dashboard, widgets, layout, config UI
 
 Issues and pull requests are welcome. Please keep changes focused and consistent with existing patterns in the repo.
 
+### Engineering quality gates
+
+- Frontend testing rubric: `docs/quality/testing-rubric.md`
+- Component and function documentation standard: `docs/quality/component-documentation-standard.md`
+- Source documentation checklist: `docs/quality/source-documentation-checklist.md`
+- Coverage command: `npm run test:coverage`
+
 ## License
 
 This project is released under the **GNU General Public License v2.0** — see the [`LICENSE`](LICENSE) file in this repository (SPDX: `GPL-2.0-only`).

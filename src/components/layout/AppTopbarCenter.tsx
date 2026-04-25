@@ -54,6 +54,19 @@ type AppTopbarCenterProps = {
   widgetTypeIcon: (type: WidgetType) => string;
 };
 
+/**
+ * Center section of the top bar for dashboard context and editing controls.
+ *
+ * State modification contract:
+ * - Source of truth: parent orchestration layer provides all state via props.
+ * - Allowed mutation paths: `onToggle*`, `onSelect*`, `onAdd*`, and rollback callbacks.
+ * - Guard rules: lock state gates editing actions, breakpoint editing controls,
+ *   and dashboard-switch affordances.
+ *
+ * Significant decisions:
+ * - When unlocked (editing), dashboard menus expose edit operations.
+ * - Lock state is treated as a policy gate, not local component state.
+ */
 export function AppTopbarCenter(props: AppTopbarCenterProps) {
   return (
     <div class="app-topbar-center">

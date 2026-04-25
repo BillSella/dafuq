@@ -11,7 +11,18 @@ type NavToolButtonProps = {
   blocked?: boolean;
 };
 
+/**
+ * Vertical navigation button used by the left rail.
+ *
+ * Responsibilities:
+ * - expose semantic label/title metadata
+ * - reflect active and blocked visual state
+ * - prevent click callbacks while blocked
+ */
 export function NavToolButton(props: NavToolButtonProps): JSX.Element {
+  /**
+   * Normalizes the optional blocked prop into a stable boolean accessor.
+   */
   const blocked = () => !!props.blocked;
 
   return (

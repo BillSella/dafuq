@@ -9,7 +9,22 @@ type LeftNavRailProps = {
   onSelectNavTool: (tool: LeftNavTool) => void;
 };
 
+/**
+ * Left-side navigation rail for top-level application sections.
+ *
+ * State modification contract:
+ * - Source of truth: parent component owns active tool and lock state.
+ * - Allowed mutation path: `onSelectNavTool`.
+ * - Guard rule: non-dashboard tools are blocked when `toolSwitchLocked` is true.
+ *
+ * Significant decision:
+ * - Dashboard remains selectable while editing so users can always return
+ *   to the primary workspace, while other tools are locked out.
+ */
 export function LeftNavRail(props: LeftNavRailProps) {
+  /**
+   * Normalizes optional lock prop for consistent gating checks.
+   */
   const toolSwitchLocked = () => !!props.toolSwitchLocked;
 
   return (

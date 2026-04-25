@@ -36,9 +36,25 @@ type AppTopbarToolsProps = {
   onCloseUserMenu?: () => void;
 };
 
+/**
+ * Right-side topbar controls for time window and user menu actions.
+ *
+ * State modification contract:
+ * - Source of truth: parent layer owns time-window and menu-open state.
+ * - Allowed mutation paths: callback props (`onToggleTimeWindowMenu`, `onApplyRelativePreset`,
+ *   `onSetTimeWindowCustomView`, custom range update/apply handlers, and user-menu callbacks).
+ * - Guard behavior: this component does not enforce lock policy itself; it delegates policy to parent.
+ *
+ * Significant decision:
+ * - Session logout is executed through `SessionContext` while menu-close behavior is delegated
+ *   to an optional parent callback to preserve orchestrator ownership of UI state.
+ */
 export function AppTopbarTools(props: AppTopbarToolsProps) {
   const session = useSession();
 
+  /**
+   * Logs out the current session and optionally asks parent state to close the user menu.
+   */
   const onLogOut = () => {
     session.logOut();
     props.onCloseUserMenu?.();
