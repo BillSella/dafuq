@@ -1,5 +1,17 @@
 export const TIME_WINDOW_STORAGE_KEY = "dafuq:timeWindow";
 
+/**
+ * Dashboard time-window state model and storage helpers.
+ *
+ * State modification contract:
+ * - Source of truth: caller-owned `TimeWindowState` passed into helper functions.
+ * - Mutation paths:
+ *   - `loadTimeWindowFromStorage` hydrates state from localStorage with validation.
+ *   - `saveTimeWindowToStorage` persists caller-owned state.
+ * - Guard behavior: invalid or unreadable storage payloads always fall back
+ *   to `defaultTimeWindow()` to keep UI state recoverable.
+ */
+
 export type RelativePresetId =
   | "last1h"
   | "last4h"
@@ -33,10 +45,20 @@ export const RELATIVE_PRESETS: ReadonlyArray<{
   { id: "last1y", label: "Last 1 Year", buttonLabel: "1 Year", durationMs: 365 * D }
 ];
 
+/**
+ * Returns the canonical initial time window state.
+ */
 export function defaultTimeWindow(): TimeWindowState {
   return { kind: "relative", preset: "last1h" };
 }
 
+/**
+ * Resolves a state model into concrete from/to timestamps.
+ *
+ * @param state Relative or absolute time-window state.
+ * @param nowMs Reference "now" used for relative windows.
+ * @returns Normalized range where `fromMs <= toMs`.
+ */
 export function resolveTimeRange(
   state: TimeWindowState,
   nowMs: number = Date.now()
@@ -51,6 +73,9 @@ export function resolveTimeRange(
   return { fromMs: nowMs - durationMs, toMs: nowMs };
 }
 
+/**
+ * Returns short button text for the current time-window state.
+ */
 export function timeWindowButtonLabel(state: TimeWindowState): string {
   if (state.kind === "relative") {
     return RELATIVE_PRESETS.find((p) => p.id === state.preset)?.buttonLabel ?? "Time";
@@ -58,6 +83,9 @@ export function timeWindowButtonLabel(state: TimeWindowState): string {
   return "Custom";
 }
 
+/**
+ * Returns a human-readable summary label for the current time-window state.
+ */
 export function timeWindowSummaryLabel(state: TimeWindowState, nowMs: number = Date.now()): string {
   if (state.kind === "relative") {
     return RELATIVE_PRESETS.find((p) => p.id === state.preset)?.label ?? "Time range";
@@ -66,10 +94,18 @@ export function timeWindowSummaryLabel(state: TimeWindowState, nowMs: number = D
   return `${new Date(fromMs).toLocaleString()} – ${new Date(toMs).toLocaleString()}`;
 }
 
+/**
+ * Validates whether a string maps to a known relative preset id.
+ */
 export function isValidRelativePreset(id: string): id is RelativePresetId {
   return RELATIVE_PRESETS.some((p) => p.id === id);
 }
 
+/**
+ * Loads and validates persisted time-window state from localStorage.
+ *
+ * Falls back to the default state on missing, malformed, or invalid data.
+ */
 export function loadTimeWindowFromStorage(): TimeWindowState {
   try {
     const raw = localStorage.getItem(TIME_WINDOW_STORAGE_KEY);
@@ -95,6 +131,11 @@ export function loadTimeWindowFromStorage(): TimeWindowState {
   return defaultTimeWindow();
 }
 
+/**
+ * Persists time-window state to localStorage.
+ *
+ * Storage failures are ignored to avoid blocking UI flows in restricted environments.
+ */
 export function saveTimeWindowToStorage(state: TimeWindowState): void {
   try {
     localStorage.setItem(TIME_WINDOW_STORAGE_KEY, JSON.stringify(state));
@@ -110,6 +151,11 @@ export function toDateTimeLocalValue(ms: number): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/**
+ * Parses a `datetime-local` input value into epoch milliseconds.
+ *
+ * @returns `null` when input is empty or cannot be parsed.
+ */
 export function fromDateTimeLocalValue(value: string): number | null {
   if (!value.trim()) return null;
   const t = new Date(value).getTime();
