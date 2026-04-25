@@ -1,10 +1,9 @@
 import { For, Show, type JSX } from "solid-js";
 import { useSession } from "../../session/SessionContext";
 import type { RelativePresetId, TimeWindowState } from "../../timeWindow";
+import type { AppModuleId } from "../../modules/moduleTypes";
 import { MenuDropdown } from "../ui/MenuDropdown";
 import { ToolButton } from "../ui/ToolButton";
-
-type NavTool = "dashboards" | "trafficAnalysis" | "help" | "settings" | "userSettings";
 
 type AppTopbarToolsProps = {
   currentClock: string;
@@ -16,7 +15,7 @@ type AppTopbarToolsProps = {
   customRangeFrom: string;
   customRangeTo: string;
   relativePresets: ReadonlyArray<{ id: RelativePresetId; label: string }>;
-  activeNavTool: NavTool;
+  activeNavTool: AppModuleId;
   userMenuOpen: boolean;
   timeWindowButtonRef?: JSX.HTMLAttributes<HTMLButtonElement>["ref"];
   timeWindowMenuRef?: JSX.HTMLAttributes<HTMLDivElement>["ref"];

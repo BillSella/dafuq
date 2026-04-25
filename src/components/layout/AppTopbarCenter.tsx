@@ -2,13 +2,12 @@ import { For, Show, type JSX } from "solid-js";
 import type { DashboardBreakpoint, DashboardDoc } from "../../dashboardStore";
 import { BREAKPOINT_OPTIONS } from "../../layoutService";
 import type { WidgetLibraryItem, WidgetType } from "../../widgets/widgetRegistry";
+import type { AppModuleId } from "../../modules/moduleTypes";
 import { MenuDropdown } from "../ui/MenuDropdown";
 import { ToolButton } from "../ui/ToolButton";
 
-type NavTool = "dashboards" | "trafficAnalysis" | "help" | "settings" | "userSettings";
-
 type AppTopbarCenterProps = {
-  activeNavTool: NavTool;
+  activeNavTool: AppModuleId;
   activeToolTitle: string;
   activeDashboardName: string;
   dashboards: DashboardDoc[];

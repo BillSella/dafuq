@@ -82,6 +82,9 @@ import { useDismissOnOutsideClick } from "./hooks/useDismissOnOutsideClick";
 import { fetchDashboardsFromServer, saveDashboardsToServer } from "./dashboardServerSync";
 import { useDashboardRollback } from "./dashboard/useDashboardRollback";
 import { useDashboardAutosave } from "./dashboard/useDashboardAutosave";
+import { DashboardModule } from "./modules/dashboard/DashboardModule";
+import { getAppModule, getModulePlaceholderMessage } from "./modules/moduleRegistry";
+import type { AppModuleId } from "./modules/moduleTypes";
 
 /**
  * Dashboard editor shell:
@@ -90,12 +93,6 @@ import { useDashboardAutosave } from "./dashboard/useDashboardAutosave";
  * - manages widget settings panel
  */
 type SlideDirection = "left" | "right" | "top" | "bottom";
-type NavTool =
-  | "dashboards"
-  | "trafficAnalysis"
-  | "help"
-  | "settings"
-  | "userSettings";
 const LIBRARY_WIDGET_KEY = "application/x-dashboard-widget";
 type DashboardWidget = WidgetStateByType;
 const DEBUG_WIDGET_EVENTS = true;
@@ -150,7 +147,7 @@ function App() {
   } | null>(null);
   const [draggingLibraryType, setDraggingLibraryType] = createSignal<WidgetType | null>(null);
   const [debugCounts, setDebugCounts] = createSignal<Record<string, number>>({});
-  const [activeNavTool, setActiveNavTool] = createSignal<NavTool>("dashboards");
+  const [activeNavTool, setActiveNavTool] = createSignal<AppModuleId>("dashboards");
   const [userMenuOpen, setUserMenuOpen] = createSignal(false);
   const [timeWindow, setTimeWindow] = createSignal<TimeWindowState>(loadTimeWindowFromStorage());
   const [timeWindowMenuOpen, setTimeWindowMenuOpen] = createSignal(false);
@@ -359,14 +356,7 @@ function App() {
     if (enabled.includes("desktopFhd")) return "desktopFhd";
     return enabled[0] ?? null;
   });
-  const activeToolTitle = createMemo(() => {
-    const active = activeNavTool();
-    if (active === "dashboards") return "Dashboards";
-    if (active === "trafficAnalysis") return "Traffic Analysis";
-    if (active === "help") return "Help";
-    if (active === "userSettings") return "User Settings";
-    return "Settings";
-  });
+  const activeToolTitle = createMemo(() => getAppModule(activeNavTool()).topbarTitle);
   const fontSizeValue = (size: GaugeConfig["fontSize"]) => {
     if (size === "small") return "0.82rem";
     if (size === "large") return "1.2rem";
@@ -1467,7 +1457,13 @@ function App() {
         />
 
         <main class="dashboard-host">
-          {activeNavTool() === "dashboards" ? (
+          <Show
+            when={activeNavTool() === "dashboards"}
+            fallback={
+              <DashboardPlaceholderPane message={getModulePlaceholderMessage(activeNavTool())} />
+            }
+          >
+            <DashboardModule>
           <>
           <DashboardEditorPane
             gridShellRef={(el) => {
@@ -2283,15 +2279,8 @@ function App() {
         )}
       </WidgetConfigOverlayShell>
           </>
-          ) : activeNavTool() === "trafficAnalysis" ? (
-            <DashboardPlaceholderPane message="Traffic Analysis view placeholder." />
-          ) : activeNavTool() === "userSettings" ? (
-            <DashboardPlaceholderPane message="User Settings view placeholder." />
-          ) : activeNavTool() === "help" ? (
-            <DashboardPlaceholderPane message="Help view placeholder. We can add status-dot legend and usage docs here." />
-          ) : (
-            <DashboardPlaceholderPane message="Settings view placeholder." />
-          )}
+            </DashboardModule>
+          </Show>
         </main>
       </div>
 

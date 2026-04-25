@@ -1,12 +1,11 @@
+import type { AppModuleId } from "../../modules/moduleTypes";
 import { NavBottomGroup } from "../ui/NavBottomGroup";
 import { NavToolButton } from "../ui/NavToolButton";
 
-type LeftNavTool = "dashboards" | "trafficAnalysis" | "help" | "settings" | "userSettings";
-
 type LeftNavRailProps = {
-  activeNavTool: LeftNavTool;
+  activeNavTool: AppModuleId;
   toolSwitchLocked?: boolean;
-  onSelectNavTool: (tool: LeftNavTool) => void;
+  onSelectNavTool: (tool: AppModuleId) => void;
 };
 
 /**
