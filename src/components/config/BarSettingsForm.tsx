@@ -13,6 +13,14 @@ type BarSettingsFormProps = {
   baseSettings: JSX.Element;
 };
 
+/**
+ * Bar/column chart configuration form with orientation and numeric options.
+ *
+ * State modification contract:
+ * - Source of truth: parent-controlled `config`.
+ * - Mutation path: emits partial bar config updates through `onPatch`.
+ * - Reuses shared API and formatting field components.
+ */
 export function BarSettingsForm(props: BarSettingsFormProps) {
   return (
     <>

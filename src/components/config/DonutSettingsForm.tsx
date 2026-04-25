@@ -12,6 +12,14 @@ type DonutSettingsFormProps = {
   baseSettings: JSX.Element;
 };
 
+/**
+ * Donut chart configuration form built from shared settings primitives.
+ *
+ * State modification contract:
+ * - Source of truth: parent-owned `config`.
+ * - Mutation path: emits partial donut config updates via `onPatch`.
+ * - Shared base controls are injected via `baseSettings`.
+ */
 export function DonutSettingsForm(props: DonutSettingsFormProps) {
   return (
     <>
