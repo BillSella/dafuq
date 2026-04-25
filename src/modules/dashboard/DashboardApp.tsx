@@ -12,17 +12,11 @@ import {
   UPDATE_FREQUENCY_OPTIONS,
   type DashboardBreakpoint,
   type DashboardDoc,
-  type DashboardWidgetDoc,
   getWidgetDisplayConfig,
   getWidgetPlacement,
   upsertWidgetPlacement,
   type WidgetDisplayConfig,
-  type WidgetPatch,
-  deleteWidgetInDashboards,
   ensureWidgetsFitGridInDashboards,
-  updateWidgetConfigInDashboards,
-  updateWidgetInDashboards,
-  updateWidgetVisibilityInDashboards
 } from "../../dashboardStore";
 import {
   loadDashboardsFromStorage,
@@ -32,13 +26,10 @@ import {
   BREAKPOINT_IDS,
   BREAKPOINT_OPTIONS,
   detectBreakpointFromViewport,
-  getGridSizeForBreakpoint,
-  projectPlacementAcrossBreakpoints
+  getGridSizeForBreakpoint
 } from "../../layoutService";
 import {
-  type CommonWidgetSettingsPatch,
   DEFAULT_WIDGET_TYPE,
-  type WidgetConfigMap,
   type WidgetType,
   widgetLibrary,
   widgetRegistry,
@@ -78,6 +69,7 @@ import { DashboardWidgetConfigOverlay } from "./DashboardWidgetConfigOverlay";
 import { useDashboardManagement } from "./useDashboardManagement";
 import { useDashboardRuntimeValues } from "./useDashboardRuntimeValues";
 import { useDashboardTopbarTimeWindow } from "./useDashboardTopbarTimeWindow";
+import { useDashboardWidgetCommands } from "./useDashboardWidgetCommands";
 import { getAppModule } from "../moduleRegistry";
 import type { AppModuleId } from "../moduleTypes";
 import { WorkspaceShell } from "../shell/WorkspaceShell";
@@ -165,7 +157,7 @@ export default function DashboardApp() {
   let rollbackMenuRef: HTMLDivElement | undefined;
   let rollbackButtonRef: HTMLButtonElement | undefined;
   const widgetRefs = new Map<string, HTMLDivElement>();
-  let idCounter = 2;
+  const idCounterRef = { current: 2 };
   let previousStep = 32;
   let normalizedOnce = false;
   const panelHeightMin = 360;
@@ -425,76 +417,6 @@ export default function DashboardApp() {
     console.debug(`[widget-debug] ${eventName}`);
   };
 
-  const addWidgetFromMenu = (type: WidgetType) => {
-    const count = widgets().length;
-    const footprint = getWidgetFootprintForCurrentGrid(type);
-    const gapUnits = 1;
-    const laneWidth = Math.max(footprint.colSpan + gapUnits, Math.floor(columns() / 2));
-    const col = 1 + (count % 2) * laneWidth;
-    const row = 1 + Math.floor(count / 2) * (footprint.rowSpan + gapUnits);
-    addWidgetAt(type, col, row);
-    setWidgetMenuOpen(false);
-  };
-
-  const updateWidget = (id: string, patch: WidgetPatch) => {
-    bumpDebug("updateWidget", { id, patch });
-    const currentDashboardId = activeDashboardId();
-    const currentBreakpoint = selectedBreakpoint();
-    setDashboards((previous) =>
-      updateWidgetInDashboards(previous, currentDashboardId, currentBreakpoint, id, patch)
-    );
-  };
-
-  const updateWidgetConfig = (
-    id: string,
-    patch: Partial<WidgetConfigMap[WidgetType]> | CommonWidgetSettingsPatch
-  ) => {
-    bumpDebug("updateWidgetConfig", { id, patch });
-    const currentDashboardId = activeDashboardId();
-    const currentBreakpoint = selectedBreakpoint();
-    setDashboards((previous) =>
-      updateWidgetConfigInDashboards(previous, currentDashboardId, currentBreakpoint, id, patch)
-    );
-  };
-
-  const updateWidgetVisibility = (
-    id: string,
-    breakpoint: DashboardBreakpoint,
-    visible: boolean
-  ) => {
-    const currentDashboardId = activeDashboardId();
-    setDashboards((previous) =>
-      updateWidgetVisibilityInDashboards(previous, currentDashboardId, id, breakpoint, visible)
-    );
-  };
-
-  const deleteWidget = (id: string) => {
-    bumpDebug("deleteWidget", { id });
-    const currentDashboardId = activeDashboardId();
-    setDashboards((previous) => deleteWidgetInDashboards(previous, currentDashboardId, id));
-    if (configWidgetId() === id) {
-      setConfigWidgetId(null);
-    }
-  };
-
-  const getWidgetFootprintForCurrentGrid = (type: WidgetType): { colSpan: number; rowSpan: number } => {
-    const base = widgetRegistry[type].createState("size-probe", 1, 1);
-    const LEGACY_STEP = 16;
-    const minSpan = Math.max(1, Math.ceil(16 / Math.max(1, step())));
-    return {
-      colSpan: clamp(
-        Math.max(minSpan, Math.round((base.colSpan * LEGACY_STEP) / Math.max(1, step()))),
-        minSpan,
-        columns()
-      ),
-      rowSpan: clamp(
-        Math.max(minSpan, Math.round((base.rowSpan * LEGACY_STEP) / Math.max(1, step()))),
-        minSpan,
-        rows()
-      )
-    };
-  };
-
   const ensureWidgetsFitGrid = (nextColumns: number, nextRows: number) => {
     const minSpan = Math.max(1, Math.ceil(16 / step()));
     const currentDashboardId = activeDashboardId();
@@ -547,52 +469,33 @@ export default function DashboardApp() {
     setPanelLeft(centeredLeft);
     setPanelTop(centeredTop);
   };
-
-  const addWidgetAt = (type: WidgetType, col: number, row: number) => {
-    const id = `widget-${idCounter++}-${crypto.randomUUID()}`;
-    const baseState = widgetRegistry[type].createState(id, col, row);
-    const footprint = getWidgetFootprintForCurrentGrid(type);
-    const colStart = clamp(baseState.colStart, 1, columns() - footprint.colSpan + 1);
-    const rowStart = clamp(baseState.rowStart, 1, rows() - footprint.rowSpan + 1);
-    const currentBreakpoint = selectedBreakpoint();
-    const nextState: DashboardWidget = {
-      ...baseState,
-      colStart,
-      rowStart,
-      colSpan: footprint.colSpan,
-      rowSpan: footprint.rowSpan
-    };
-    const widgetDoc: DashboardWidgetDoc = {
-      id: nextState.id,
-      type: nextState.type,
-      config: nextState.config,
-      placements: projectPlacementAcrossBreakpoints(
-        currentBreakpoint,
-        {
-          colStart: nextState.colStart,
-          rowStart: nextState.rowStart,
-          colSpan: nextState.colSpan,
-          rowSpan: nextState.rowSpan
-        },
-        gridViewportWidth(),
-        gridViewportHeight()
-      ),
-      display: BREAKPOINT_IDS.map((breakpoint) => ({
-        breakpoint,
-        ...widgetRegistry[nextState.type].getDisplayConfigFromConfig(nextState.config)
-      }))
-    };
-    const currentDashboardId = activeDashboardId();
-    setDashboards((previous) =>
-      previous.map((dashboard) =>
-        dashboard.id === currentDashboardId
-          ? { ...dashboard, widgets: [...dashboard.widgets, widgetDoc] }
-          : dashboard
-      )
-    );
-    setConfigWidgetId(id);
-    queueMicrotask(updatePanelPlacement);
-  };
+  const widgetCommands = useDashboardWidgetCommands({
+    dashboards,
+    setDashboards,
+    activeDashboardId,
+    selectedBreakpoint,
+    columns,
+    rows,
+    step,
+    gridViewportWidth,
+    gridViewportHeight,
+    widgets,
+    setWidgetMenuOpen,
+    setConfigWidgetId,
+    configWidgetId,
+    updatePanelPlacement,
+    bumpDebug,
+    idCounterRef
+  });
+  const {
+    updateWidget,
+    updateWidgetConfig,
+    updateWidgetVisibility,
+    deleteWidget,
+    getWidgetFootprintForCurrentGrid,
+    addWidgetAt,
+    addWidgetFromMenu
+  } = widgetCommands;
 
   const onLibraryDragStart = (event: DragEvent, type: WidgetType) => {
     if (dashboardLocked()) return;
