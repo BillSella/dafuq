@@ -17,6 +17,14 @@ type WidgetVisibilityFieldProps = {
   buttonRef?: JSX.HTMLAttributes<HTMLButtonElement>["ref"];
 };
 
+/**
+ * Breakpoint-level visibility control menu for a single widget.
+ *
+ * State modification contract:
+ * - Source of truth: visibility values come from `widgetDoc` placements.
+ * - Mutation path: checkbox changes emit `(breakpoint, visible)` through `onChange`.
+ * - Menu open state is externally controlled by `open` + `onToggleOpen`.
+ */
 export function WidgetVisibilityField(props: WidgetVisibilityFieldProps): JSX.Element {
   const enabledCount = () =>
     props.options.filter((option) => {

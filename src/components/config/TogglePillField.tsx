@@ -8,6 +8,13 @@ type TogglePillFieldProps = {
   onChange: (value: boolean) => void;
 };
 
+/**
+ * Boolean settings field that wraps `PillSelector` with On/Off options.
+ *
+ * State modification contract:
+ * - Source of truth: parent-controlled `value` prop.
+ * - Mutation path: emits normalized boolean values via `onChange`.
+ */
 export function TogglePillField(props: TogglePillFieldProps) {
   return (
     <fieldset class={`field fieldset ${props.class ?? ""}`.trim()}>
