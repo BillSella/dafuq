@@ -45,17 +45,8 @@ import {
   widgetRegistry,
   type WidgetStateByType
 } from "../../widgets/widgetRegistry";
-import { BarSettingsForm } from "../../components/config/BarSettingsForm";
 import { BaseWidgetSettingsSection } from "../../components/config/BaseWidgetSettingsSection";
 import { DashboardSettingsOverlay } from "../../components/config/DashboardSettingsOverlay";
-import { DonutSettingsForm } from "../../components/config/DonutSettingsForm";
-import { LabelSettingsForm } from "../../components/config/LabelSettingsForm";
-import { MapSettingsForm } from "../../components/config/MapSettingsForm";
-import { NumberGaugeSettingsForm } from "../../components/config/NumberGaugeSettingsForm";
-import { SparklineSettingsForm } from "../../components/config/SparklineSettingsForm";
-import { TimeSeriesSettingsForm } from "../../components/config/TimeSeriesSettingsForm";
-import { OverlayPanel } from "../../components/config/OverlayPanel";
-import { WidgetConfigOverlayShell } from "../../components/config/WidgetConfigOverlayShell";
 import { AppTopbarCenter } from "../../components/layout/AppTopbarCenter";
 import { AppTopbarTools } from "../../components/layout/AppTopbarTools";
 import { DashboardEditorPane } from "../../components/layout/DashboardEditorPane";
@@ -92,6 +83,7 @@ import {
   widgetTypeIcon
 } from "./dashboardEditorConstants";
 import { DashboardMainRegion } from "./DashboardMainRegion";
+import { DashboardWidgetConfigOverlay } from "./DashboardWidgetConfigOverlay";
 import { getAppModule } from "../moduleRegistry";
 import type { AppModuleId } from "../moduleTypes";
 import { WorkspaceShell } from "../shell/WorkspaceShell";
@@ -2045,204 +2037,29 @@ export default function DashboardApp() {
             />
           </DashboardEditorPane>
 
-      <WidgetConfigOverlayShell
+      <DashboardWidgetConfigOverlay
         panelRef={(el) => {
           widgetConfigPanelRef = el;
         }}
-        open={!!activeWidget()}
-        slideDirection={slideDirection()}
-        top={panelTop()}
-        left={panelLeft()}
-        width={widgetPanelWidth()}
-        height={widgetPanelHeight()}
-      >
-        {activeWidget()?.type === "numberGauge" ? (
-          <NumberGaugeSettingsForm
-            config={
-              activeGaugeWidget()?.config ?? {
-                label: "Primary Sensor",
-                fontSize: "medium",
-                align: "center",
-                apiEndpoint: "",
-                field: "",
-                defaultValue: "72",
-                decimalPlaces: 1,
-                format: "full",
-                updateGroup: ""
-              }
-            }
-            dashboardUpdateGroups={dashboardUpdateGroups()}
-            baseSettings={renderBaseWidgetSettings("label")}
-            onPatch={(patch) => {
-              const id = configWidgetId();
-              if (!id) return;
-              updateWidgetConfig(id, patch);
-            }}
-          />
-        ) : activeWidget()?.type === "label" ? (
-          <LabelSettingsForm
-            config={
-              activeLabelWidget()?.config ?? {
-                sourceMode: "static",
-                align: "center",
-                staticText: "Label Text",
-                apiEndpoint: "",
-                field: "",
-                fallbackText: "No Data",
-                updateGroup: ""
-              }
-            }
-            dashboardUpdateGroups={dashboardUpdateGroups()}
-            baseSettings={renderBaseWidgetSettings("staticText")}
-            onPatch={(patch) => {
-              const id = configWidgetId();
-              if (!id) return;
-              updateWidgetConfig(id, patch);
-            }}
-          />
-        ) : activeWidget()?.type === "donutChart" ? (
-          <DonutSettingsForm
-            config={
-              activeDonutWidget()?.config ?? {
-                label: "Utilization",
-                align: "center",
-                ringWidth: 13,
-                min: 0,
-                max: 100,
-                decimals: 1,
-                format: "compact",
-                defaultValue: "",
-                seriesLabelField: "label",
-                seriesValueField: "value",
-                updateGroup: "",
-                apiEndpoint: "",
-                field: ""
-              }
-            }
-            dashboardUpdateGroups={dashboardUpdateGroups()}
-            baseSettings={renderBaseWidgetSettings("label")}
-            onPatch={(patch) => {
-              const id = configWidgetId();
-              if (!id) return;
-              updateWidgetConfig(id, patch);
-            }}
-          />
-        ) : activeWidget()?.type === "sparklineChart" ? (
-          <SparklineSettingsForm
-            config={
-              activeSparklineWidget()?.config ?? {
-                label: "Latency",
-                align: "left",
-                min: 0,
-                max: 100,
-                format: "compact",
-                decimals: 1,
-                defaultValue: "",
-                seriesLabelField: "label",
-                seriesValueField: "value",
-                strokeWidth: 2.5,
-                showFill: true,
-                updateGroup: "",
-                apiEndpoint: "",
-                field: ""
-              }
-            }
-            dashboardUpdateGroups={dashboardUpdateGroups()}
-            baseSettings={renderBaseWidgetSettings("label")}
-            onPatch={(patch) => {
-              const id = configWidgetId();
-              if (!id) return;
-              updateWidgetConfig(id, patch);
-            }}
-          />
-        ) : activeWidget()?.type === "timeSeriesChart" ? (
-          <TimeSeriesSettingsForm
-            config={
-              activeTimeSeriesWidget()?.config ?? {
-                label: "Requests / min",
-                align: "left",
-                min: 0,
-                max: 12,
-                format: "compact",
-                decimals: 1,
-                defaultValue: "",
-                seriesLabelField: "t",
-                seriesValueField: "a",
-                seriesValueFields: "a, b",
-                strokeWidth: 2.2,
-                showFill: true,
-                showGrid: true,
-                stacked: false,
-                updateGroup: "",
-                apiEndpoint: "",
-                field: ""
-              }
-            }
-            dashboardUpdateGroups={dashboardUpdateGroups()}
-            baseSettings={renderBaseWidgetSettings("label")}
-            onPatch={(patch) => {
-              const id = configWidgetId();
-              if (!id) return;
-              updateWidgetConfig(id, patch);
-            }}
-          />
-        ) : activeWidget()?.type === "mapNetwork" ? (
-          <MapSettingsForm
-            config={
-              activeMapWidget()?.config ?? {
-                label: "Map",
-                align: "left",
-                mapRegion: "world",
-                min: 0,
-                max: 1000,
-                dotRadiusMin: 2.2,
-                dotRadiusMax: 9.5,
-                format: "compact",
-                decimals: 0,
-                lineBend: 0.14,
-                defaultValue: "",
-                updateGroup: "",
-                apiEndpoint: "",
-                field: ""
-              }
-            }
-            dashboardUpdateGroups={dashboardUpdateGroups()}
-            baseSettings={renderBaseWidgetSettings("label")}
-            onPatch={(patch) => {
-              const id = configWidgetId();
-              if (!id) return;
-              updateWidgetConfig(id, patch);
-            }}
-          />
-        ) : (
-          <BarSettingsForm
-            config={
-              activeBarWidget()?.config ?? {
-                label: "Throughput",
-                align: "left",
-                orientation: "horizontal",
-                min: 0,
-                max: 100,
-                format: "compact",
-                decimals: 1,
-                defaultValue: "",
-                seriesLabelField: "label",
-                seriesValueField: "value",
-                updateGroup: "",
-                apiEndpoint: "",
-                field: ""
-              }
-            }
-            dashboardUpdateGroups={dashboardUpdateGroups()}
-            baseSettings={renderBaseWidgetSettings("label")}
-            onPatch={(patch) => {
-              const id = configWidgetId();
-              if (!id) return;
-              updateWidgetConfig(id, patch);
-            }}
-          />
-        )}
-      </WidgetConfigOverlayShell>
+        open={() => !!activeWidget()}
+        slideDirection={slideDirection}
+        panelTop={panelTop}
+        panelLeft={panelLeft}
+        width={widgetPanelWidth}
+        height={widgetPanelHeight}
+        activeWidget={activeWidget}
+        activeGaugeWidget={activeGaugeWidget}
+        activeLabelWidget={activeLabelWidget}
+        activeDonutWidget={activeDonutWidget}
+        activeSparklineWidget={activeSparklineWidget}
+        activeTimeSeriesWidget={activeTimeSeriesWidget}
+        activeMapWidget={activeMapWidget}
+        activeBarWidget={activeBarWidget}
+        dashboardUpdateGroups={dashboardUpdateGroups}
+        renderBaseWidgetSettings={renderBaseWidgetSettings}
+        configWidgetId={configWidgetId}
+        updateWidgetConfig={updateWidgetConfig}
+      />
           </>
           </DashboardMainRegion>
       )}
