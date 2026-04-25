@@ -14,6 +14,13 @@ type OverlayPanelProps = {
   children: JSX.Element;
 };
 
+/**
+ * Generic positioned overlay container with directional slide classes.
+ *
+ * State modification contract:
+ * - Open/close state is fully controlled by `open`.
+ * - Position and size are fully controlled by numeric layout props.
+ */
 export function OverlayPanel(props: OverlayPanelProps): JSX.Element {
   return (
     <div

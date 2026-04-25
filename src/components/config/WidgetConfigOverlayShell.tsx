@@ -15,6 +15,13 @@ type WidgetConfigOverlayShellProps = {
   children: JSX.Element;
 };
 
+/**
+ * Shared shell for widget configuration overlays.
+ *
+ * State modification contract:
+ * - Delegates open/position state control to parent props.
+ * - Adds static chrome (divider + classes) around caller-provided content.
+ */
 export function WidgetConfigOverlayShell(props: WidgetConfigOverlayShellProps): JSX.Element {
   return (
     <OverlayPanel
