@@ -11,6 +11,14 @@ type NumberGaugeSettingsFormProps = {
   baseSettings: JSX.Element;
 };
 
+/**
+ * Number gauge configuration form composed from shared settings blocks.
+ *
+ * State modification contract:
+ * - Source of truth: `config` is parent-owned.
+ * - Mutation path: emits partial gauge patches through `onPatch`.
+ * - Base display settings UI is injected by caller via `baseSettings`.
+ */
 export function NumberGaugeSettingsForm(props: NumberGaugeSettingsFormProps) {
   return (
     <>

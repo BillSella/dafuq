@@ -28,6 +28,8 @@ export default defineConfig({
         "src/components/config/ApiConnectionFields.tsx",
         "src/components/config/BaseWidgetSettingsSection.tsx",
         "src/components/config/FormatDecimalsFields.tsx",
+        "src/components/config/NumberGaugeSettingsForm.tsx",
+        "src/components/config/LabelSettingsForm.tsx",
         "src/components/layout/LeftNavRail.tsx",
         "src/components/layout/AppTopbarTools.tsx",
         "src/components/layout/AppTopbarCenter.tsx",

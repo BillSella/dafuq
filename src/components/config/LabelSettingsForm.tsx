@@ -12,6 +12,14 @@ type LabelSettingsFormProps = {
   baseSettings: JSX.Element;
 };
 
+/**
+ * Label widget configuration form combining source mode and API settings.
+ *
+ * State modification contract:
+ * - Source of truth: `config` is controlled by parent.
+ * - Mutation path: emits partial config updates via `onPatch`.
+ * - Shared base display controls are provided through `baseSettings`.
+ */
 export function LabelSettingsForm(props: LabelSettingsFormProps) {
   return (
     <>
