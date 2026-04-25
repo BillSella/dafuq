@@ -59,8 +59,6 @@ import { WidgetConfigOverlayShell } from "../../components/config/WidgetConfigOv
 import { AppTopbarCenter } from "../../components/layout/AppTopbarCenter";
 import { AppTopbarTools } from "../../components/layout/AppTopbarTools";
 import { DashboardEditorPane } from "../../components/layout/DashboardEditorPane";
-import { DashboardPlaceholderPane } from "../../components/layout/DashboardPlaceholderPane";
-import { LeftNavRail } from "../../components/layout/LeftNavRail";
 import { WidgetCanvas } from "../../components/layout/WidgetCanvas";
 import { ToolButton } from "../../components/ui/ToolButton";
 import { fetchWidgetRuntimeValue, getWidgetGroupKey } from "../../widgetDataService";
@@ -76,19 +74,20 @@ import {
   toDateTimeLocalValue,
   type TimeWindowState
 } from "../../timeWindow";
-import { DafuqLogo } from "../../components/DafuqLogo";
 import { useSession } from "../../session/SessionContext";
 import { useDismissOnOutsideClick } from "../../hooks/useDismissOnOutsideClick";
 import { fetchDashboardsFromServer, saveDashboardsToServer } from "../../dashboardServerSync";
 import { useDashboardRollback } from "../../dashboard/useDashboardRollback";
 import { useDashboardAutosave } from "../../dashboard/useDashboardAutosave";
 import { DashboardModule } from "./DashboardModule";
-import { getAppModule, getModulePlaceholderMessage } from "../moduleRegistry";
+import { NonDashboardModuleHost } from "../NonDashboardModuleHost";
+import { getAppModule } from "../moduleRegistry";
 import type { AppModuleId } from "../moduleTypes";
+import { WorkspaceShell } from "../shell/WorkspaceShell";
 
 /**
- * Authenticated multi-module workspace (nav rail, topbar, main host).
- * Dashboard editing state and UI live here; re-exported as default from `App.tsx`.
+ * Authenticated workspace: dashboard state and topbar wiring, hosted inside
+ * {@link WorkspaceShell}. Re-exported as default from `App.tsx`.
  */
 type SlideDirection = "left" | "right" | "top" | "bottom";
 const LIBRARY_WIDGET_KEY = "application/x-dashboard-widget";
@@ -1303,11 +1302,11 @@ export default function DashboardApp() {
   });
 
   return (
-    <div class="app-shell">
-      <header class="app-topbar">
-        <div class="app-topbar-logo" title="dafuq">
-          <DafuqLogo />
-        </div>
+    <WorkspaceShell
+      activeNavTool={activeNavTool()}
+      onSelectNavTool={setActiveNavTool}
+      toolSwitchLocked={!dashboardLocked()}
+      topbarCenter={() => (
         <AppTopbarCenter
           activeNavTool={activeNavTool()}
           activeToolTitle={activeToolTitle()}
@@ -1397,6 +1396,8 @@ export default function DashboardApp() {
           onSetDashboardBreakpointEnabled={setDashboardBreakpointEnabled}
           widgetTypeIcon={widgetTypeIcon}
         />
+      )}
+      topbarTools={() => (
         <AppTopbarTools
           currentClock={currentClock()}
           currentClockIso={currentClockIso()}
@@ -1445,21 +1446,11 @@ export default function DashboardApp() {
           }}
           onCloseUserMenu={() => setUserMenuOpen(false)}
         />
-      </header>
-
-      <div class="app-main">
-        <LeftNavRail
-          activeNavTool={activeNavTool()}
-          toolSwitchLocked={!dashboardLocked()}
-          onSelectNavTool={setActiveNavTool}
-        />
-
-        <main class="dashboard-host">
+      )}
+      main={() => (
           <Show
             when={activeNavTool() === "dashboards"}
-            fallback={
-              <DashboardPlaceholderPane message={getModulePlaceholderMessage(activeNavTool())} />
-            }
+            fallback={<NonDashboardModuleHost moduleId={activeNavTool()} />}
           >
             <DashboardModule>
           <>
@@ -2279,9 +2270,8 @@ export default function DashboardApp() {
           </>
             </DashboardModule>
           </Show>
-        </main>
-      </div>
-
+      )}
+      overlays={() => (
       <DashboardSettingsOverlay
         panelRef={(el) => {
           dashboardSettingsPanelRef = el;
@@ -2300,6 +2290,7 @@ export default function DashboardApp() {
         onDeleteConfirmInputChange={setDashboardDeleteConfirmInput}
         onDelete={deleteActiveDashboard}
       />
-    </div>
+      )}
+    />
   );
 }
