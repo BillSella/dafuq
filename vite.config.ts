@@ -24,7 +24,8 @@ export default defineConfig({
         "src/timeWindow.ts",
         "src/authToken.ts",
         "src/dashboardPersistence.ts",
-        "src/layoutService.ts"
+        "src/layoutService.ts",
+        "src/session/SessionContext.tsx"
       ],
       exclude: [
         "src/main.tsx",
