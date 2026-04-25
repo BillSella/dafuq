@@ -22,6 +22,7 @@ export default defineConfig({
         "src/components/layout/DashboardEditorPane.tsx",
         "src/components/layout/DashboardPlaceholderPane.tsx",
         "src/components/layout/WidgetCanvas.tsx",
+        "src/components/auth/AuthLandingPage.tsx",
         "src/hooks/useDismissOnOutsideClick.ts",
         "src/timeWindow.ts",
         "src/authToken.ts",

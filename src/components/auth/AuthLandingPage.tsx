@@ -6,6 +6,15 @@ import { DafuqLogo } from "../DafuqLogo";
 /**
  * Full-screen sign-in gate for production builds. In `npm run dev`, the app mounts
  * without showing this screen (see AppAuthGate).
+ *
+ * State modification contract:
+ * - Source of truth: local `username`, `password`, `pending`, and `error` signals.
+ * - Mutation paths:
+ *   - `onSubmit` updates pending/error and may persist tokens through auth helpers.
+ *   - Successful sign-in triggers `session.syncFromStorage` to update app auth state.
+ * - Guard behavior:
+ *   - duplicate submits while pending are ignored
+ *   - failed or malformed auth responses surface user-facing error state
  */
 export function AuthLandingPage() {
   const session = useSession();
@@ -14,6 +23,9 @@ export function AuthLandingPage() {
   const [pending, setPending] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
 
+  /**
+   * Submits credentials to password auth endpoint and hydrates session on success.
+   */
   const onSubmit = async (event: SubmitEvent) => {
     event.preventDefault();
     if (pending()) return;
