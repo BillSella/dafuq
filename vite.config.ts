@@ -26,6 +26,8 @@ export default defineConfig({
         "src/components/config/DashboardSettingsOverlay.tsx",
         "src/components/config/ApiSettingsSection.tsx",
         "src/components/config/ApiConnectionFields.tsx",
+        "src/components/config/BaseWidgetSettingsSection.tsx",
+        "src/components/config/FormatDecimalsFields.tsx",
         "src/components/layout/LeftNavRail.tsx",
         "src/components/layout/AppTopbarTools.tsx",
         "src/components/layout/AppTopbarCenter.tsx",

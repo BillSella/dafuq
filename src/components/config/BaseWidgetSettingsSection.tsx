@@ -22,6 +22,14 @@ type BaseWidgetSettingsSectionProps = {
   onFontSizeChange: (value: "small" | "medium" | "large") => void;
 };
 
+/**
+ * Shared display-settings block used by widget configuration forms.
+ *
+ * State modification contract:
+ * - Source of truth: all field values and visibility menu state are parent-owned.
+ * - Mutation paths: emits visibility, label, font-size, and alignment changes
+ *   through callbacks.
+ */
 export function BaseWidgetSettingsSection(props: BaseWidgetSettingsSectionProps): JSX.Element {
   return (
     <>

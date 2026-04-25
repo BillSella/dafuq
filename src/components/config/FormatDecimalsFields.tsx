@@ -11,6 +11,14 @@ type FormatDecimalsFieldsProps = {
   onDecimalsChange: (value: 0 | 1 | 2 | 3) => void;
 };
 
+/**
+ * Shared formatter controls for numeric widgets.
+ *
+ * State modification contract:
+ * - Source of truth: parent-controlled `format` and `decimals` props.
+ * - Mutation paths: emits selected values via `onFormatChange` and
+ *   `onDecimalsChange`.
+ */
 export function FormatDecimalsFields(props: FormatDecimalsFieldsProps) {
   return (
     <>
