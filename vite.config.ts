@@ -29,7 +29,8 @@ export default defineConfig({
         "src/dashboardPersistence.ts",
         "src/layoutService.ts",
         "src/session/SessionContext.tsx",
-        "src/dashboardServerSync.ts"
+        "src/dashboardServerSync.ts",
+        "src/dashboard/useDashboardRollback.ts"
       ],
       exclude: [
         "src/main.tsx",
