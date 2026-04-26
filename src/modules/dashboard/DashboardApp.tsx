@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount, type JSX } from "solid-js";
 import { type GaugeConfig } from "../../widgets/gaugeWidget";
 import { type LabelConfig } from "../../widgets/labelWidget";
 import { DonutWidget, type DonutConfig } from "../../widgets/donutWidget";
@@ -74,7 +74,7 @@ import { useDashboardWidgetCommands } from "./useDashboardWidgetCommands";
 import { useDashboardWorkspaceEffects } from "./useDashboardWorkspaceEffects";
 import { getAppModule } from "../moduleRegistry";
 import type { AppModuleId } from "../moduleTypes";
-import { WorkspaceShell } from "../shell/WorkspaceShell";
+import type { WorkspaceShellProps } from "../shell/WorkspaceShell";
 
 type DashboardAppProps = {
   /**
@@ -89,6 +89,10 @@ type DashboardAppProps = {
    * App-level module access gate for non-dashboard module hosting.
    */
   canAccessModule: (moduleId: AppModuleId) => boolean;
+  /**
+   * App-level shell renderer.
+   */
+  renderShell: (props: WorkspaceShellProps) => JSX.Element;
 };
 
 /**
@@ -704,12 +708,11 @@ export default function DashboardApp(props: DashboardAppProps) {
     })();
   });
 
-  return (
-    <WorkspaceShell
-      activeNavTool={activeNavTool()}
-      onSelectNavTool={selectNavTool}
-      toolSwitchLocked={!dashboardLocked()}
-      topbarCenter={() => (
+  const shellProps: WorkspaceShellProps = {
+    activeNavTool: activeNavTool(),
+    onSelectNavTool: selectNavTool,
+    toolSwitchLocked: !dashboardLocked(),
+    topbarCenter: () => (
         <AppTopbarCenter
           activeNavTool={activeNavTool()}
           activeToolTitle={activeToolTitle()}
@@ -799,8 +802,8 @@ export default function DashboardApp(props: DashboardAppProps) {
           onSetDashboardBreakpointEnabled={setDashboardBreakpointEnabled}
           widgetTypeIcon={widgetTypeIcon}
         />
-      )}
-      topbarTools={() => (
+      ),
+      topbarTools: () => (
         <AppTopbarTools
           currentClock={currentClock()}
           currentClockIso={currentClockIso()}
@@ -849,8 +852,8 @@ export default function DashboardApp(props: DashboardAppProps) {
           }}
           onCloseUserMenu={() => setUserMenuOpen(false)}
         />
-      )}
-      main={() => (
+      ),
+      main: () => (
           <DashboardMainRegion activeNavTool={activeNavTool} canAccessModule={props.canAccessModule}>
           <>
           <DashboardEditorGrid
@@ -935,8 +938,8 @@ export default function DashboardApp(props: DashboardAppProps) {
       />
           </>
           </DashboardMainRegion>
-      )}
-      overlays={() => (
+      ),
+      overlays: () => (
       <DashboardSettingsOverlay
         panelRef={(el) => {
           dashboardSettingsPanelRef = el;
@@ -955,7 +958,8 @@ export default function DashboardApp(props: DashboardAppProps) {
         onDeleteConfirmInputChange={setDashboardDeleteConfirmInput}
         onDelete={deleteActiveDashboard}
       />
-      )}
-    />
-  );
+      )
+  };
+
+  return props.renderShell(shellProps);
 }

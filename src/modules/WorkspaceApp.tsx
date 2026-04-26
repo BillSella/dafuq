@@ -3,6 +3,7 @@ import { useSession } from "../session/SessionContext";
 import DashboardApp from "./dashboard/DashboardApp";
 import { hasModuleAccess } from "./moduleAccessPolicy";
 import type { AppModuleId } from "./moduleTypes";
+import { WorkspaceShell } from "./shell/WorkspaceShell";
 
 /**
  * Application-layer workspace root. Owns top-level module selection and routes
@@ -24,6 +25,7 @@ export default function WorkspaceApp() {
       activeNavTool={activeNavTool()}
       onSelectNavTool={onSelectNavTool}
       canAccessModule={canAccessModule}
+      renderShell={(shellProps) => <WorkspaceShell {...shellProps} />}
     />
   );
 }
