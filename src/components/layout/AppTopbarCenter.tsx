@@ -1,6 +1,6 @@
 import { For, Show, type JSX } from "solid-js";
 import type { DashboardBreakpoint, DashboardDoc } from "../../modules/dashboard/dashboardStore";
-import { BREAKPOINT_OPTIONS } from "../../layoutService";
+import { BREAKPOINT_OPTIONS } from "../../modules/dashboard/layoutService";
 import type { WidgetLibraryItem, WidgetType } from "../../widgets/widgetRegistry";
 import type { AppModuleId } from "../../modules/moduleTypes";
 import { MenuDropdown } from "../ui/MenuDropdown";

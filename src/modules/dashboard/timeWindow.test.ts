@@ -84,4 +84,3 @@ describe("timeWindow", () => {
     expect(() => saveTimeWindowToStorage(state)).not.toThrow();
   });
 });
-
