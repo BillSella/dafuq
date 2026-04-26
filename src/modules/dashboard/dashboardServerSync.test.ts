@@ -4,18 +4,18 @@ import {
   fetchDashboardsFromServer,
   rollbackDashboardToVersion,
   saveDashboardsToServer
-} from "./modules/dashboard/dashboardServerSync";
+} from "./dashboardServerSync";
 
 const mockFns = vi.hoisted(() => ({
   getAccessToken: vi.fn(),
   normalizeDashboardDoc: vi.fn()
 }));
 
-vi.mock("./authToken", () => ({
+vi.mock("../../authToken", () => ({
   getAccessToken: mockFns.getAccessToken
 }));
 
-vi.mock("./modules/dashboard/dashboardStore", () => ({
+vi.mock("./dashboardStore", () => ({
   normalizeDashboardDoc: mockFns.normalizeDashboardDoc
 }));
 
@@ -104,4 +104,3 @@ describe("dashboardServerSync", () => {
     expect(rolledBack).toEqual({ id: "dash-1", name: "Dashboard", widgets: [] });
   });
 });
-

@@ -10,8 +10,8 @@ import {
   updateWidgetConfigInDashboards,
   updateWidgetInDashboards,
   updateWidgetVisibilityInDashboards
-} from "./modules/dashboard/dashboardStore";
-import { widgetRegistry } from "./widgets/widgetRegistry";
+} from "./dashboardStore";
+import { widgetRegistry } from "../../widgets/widgetRegistry";
 
 const BREAKPOINTS: DashboardBreakpoint[] = [
   "mobilePortrait",
@@ -221,4 +221,3 @@ describe("dashboardStore mutations", () => {
     expect(placement.rowSpan).toBeLessThanOrEqual(8);
   });
 });
-

@@ -6,8 +6,8 @@ import {
   upsertWidgetDisplayConfig,
   upsertWidgetPlacement,
   type DashboardWidgetDoc
-} from "./modules/dashboard/dashboardStore";
-import { widgetRegistry } from "./widgets/widgetRegistry";
+} from "./dashboardStore";
+import { widgetRegistry } from "../../widgets/widgetRegistry";
 
 function createWidgetDoc(): DashboardWidgetDoc {
   const state = widgetRegistry.numberGauge.createState("w-1", 2, 3);
@@ -121,4 +121,3 @@ describe("dashboardStore helpers", () => {
     expect(replaced[0]).toMatchObject({ breakpoint: "desktopFhd", label: "Desktop Label" });
   });
 });
-
