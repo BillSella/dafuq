@@ -71,6 +71,7 @@ import { useDashboardManagement } from "./useDashboardManagement";
 import { useDashboardRuntimeValues } from "./useDashboardRuntimeValues";
 import { useDashboardTopbarTimeWindow } from "./useDashboardTopbarTimeWindow";
 import { useDashboardWidgetCommands } from "./useDashboardWidgetCommands";
+import { useDashboardWorkspaceEffects } from "./useDashboardWorkspaceEffects";
 import { getAppModule } from "../moduleRegistry";
 import type { AppModuleId } from "../moduleTypes";
 import { WorkspaceShell } from "../shell/WorkspaceShell";
@@ -159,8 +160,8 @@ export default function DashboardApp() {
   let rollbackButtonRef: HTMLButtonElement | undefined;
   const widgetRefs = new Map<string, HTMLDivElement>();
   const idCounterRef = { current: 2 };
-  let previousStep = 32;
-  let normalizedOnce = false;
+  const previousStepRef = { current: 32 };
+  const normalizedOnceRef = { current: false };
   const panelHeightMin = 360;
   const gap = 6;
   const edgePadding = gap / 2;
@@ -576,40 +577,38 @@ export default function DashboardApp() {
     setGridUnitSize
   });
 
-  createEffect(() => {
-    if (!DEBUG_WIDGET_EVENTS) return;
-    // Devtool hook: window.__widgetDebug() -> per-event counters
-    (window as any).__widgetDebug = debugCounts;
-  });
-
-  createEffect(() => {
-    // Normalize once in case HMR/state restore introduced non-canonical objects.
-    if (normalizedOnce) return;
-    normalizedOnce = true;
-    setDashboards((previous) =>
-      previous.map((dashboard) => ({
-        ...dashboard,
-        enabledBreakpoints:
-          Object.values(dashboard.enabledBreakpoints ?? {}).filter(Boolean).length <= 1
-            ? (Object.fromEntries(BREAKPOINT_IDS.map((breakpoint) => [breakpoint, true])) as Record<
-                DashboardBreakpoint,
-                boolean
-              >)
-            : dashboard.enabledBreakpoints,
-        widgets: dashboard.widgets.map((widget) => ({
-          ...widget,
-          config: widgetRegistry[widget.type].normalizeConfig({
-            id: widget.id,
-            type: widget.type,
-            colStart: getWidgetPlacement(widget, selectedBreakpoint()).colStart,
-            rowStart: getWidgetPlacement(widget, selectedBreakpoint()).rowStart,
-            colSpan: getWidgetPlacement(widget, selectedBreakpoint()).colSpan,
-            rowSpan: getWidgetPlacement(widget, selectedBreakpoint()).rowSpan,
-            config: widget.config
-          })
-        }))
-      }))
-    );
+  useDashboardWorkspaceEffects({
+    debugWidgetEvents: DEBUG_WIDGET_EVENTS,
+    debugCounts,
+    setDashboards,
+    selectedBreakpoint,
+    normalizedOnceRef,
+    setVisibilityMenuOpen,
+    configWidgetId,
+    dashboardLocked,
+    setConfigWidgetId,
+    setDragPreview,
+    setDraggingLibraryType,
+    setBreakpointMenuOpen,
+    setWidgetMenuOpen,
+    setDashboardSettingsOpen,
+    closeRollbackMenu: rollback.closeRollbackMenu,
+    setDashboardMenuOpen,
+    activeDashboardId,
+    dashboards,
+    setActiveDashboardId,
+    activeNavTool,
+    gridShellRef: () => gridShellRef,
+    setGridViewportWidth,
+    setGridViewportHeight,
+    ensureWidgetsFitGrid,
+    columns,
+    rows,
+    activeDashboardDoc,
+    baseRows,
+    bottomOccupiedRow,
+    previousStepRef,
+    step
   });
 
   createEffect(() => {
@@ -661,85 +660,6 @@ export default function DashboardApp() {
       window.removeEventListener("keydown", onEscape);
       window.removeEventListener("pointerdown", onPointerDownOutside);
     });
-  });
-
-  createEffect(() => {
-    if (configWidgetId()) return;
-    setVisibilityMenuOpen(false);
-  });
-
-  createEffect(() => {
-    if (!dashboardLocked()) return;
-    setConfigWidgetId(null);
-    setDragPreview(null);
-    setDraggingLibraryType(null);
-    setBreakpointMenuOpen(false);
-    setWidgetMenuOpen(false);
-    setDashboardSettingsOpen(false);
-    rollback.closeRollbackMenu();
-  });
-
-  createEffect(() => {
-    if (dashboardLocked()) return;
-    setDashboardMenuOpen(false);
-  });
-
-  createEffect(() => {
-    const docs = dashboards();
-    if (docs.length === 0) return;
-    const activeId = activeDashboardId();
-    if (!docs.some((doc) => doc.id === activeId)) {
-      setActiveDashboardId(docs[0].id);
-    }
-  });
-
-  createEffect(() => {
-    if (activeNavTool() !== "dashboards") return;
-    if (!gridShellRef) return;
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      setGridViewportWidth(entry.contentRect.width);
-      setGridViewportHeight(entry.contentRect.height);
-    });
-    observer.observe(gridShellRef);
-    onCleanup(() => observer.disconnect());
-  });
-
-  createEffect(() => {
-    if (activeNavTool() !== "dashboards") return;
-    ensureWidgetsFitGrid(columns(), rows());
-  });
-
-  createEffect(() => {
-    if (!dashboardLocked()) return;
-    const active = activeDashboardDoc();
-    if (!active) return;
-    const currentDashboardId = activeDashboardId();
-    const currentBreakpoint = selectedBreakpoint();
-    const targetExtraRows = Math.max(0, bottomOccupiedRow() - baseRows());
-    const currentExtraRows = active.extraGridRows?.[currentBreakpoint] ?? 0;
-    if (currentExtraRows === targetExtraRows) return;
-    setDashboards((previous) =>
-      previous.map((dashboard) =>
-        dashboard.id === currentDashboardId
-          ? {
-              ...dashboard,
-              extraGridRows: {
-                ...dashboard.extraGridRows,
-                [currentBreakpoint]: targetExtraRows
-              }
-            }
-          : dashboard
-      )
-    );
-  });
-
-  createEffect(() => {
-    // Preserve approximate pixel footprint when grid unit changes.
-    const currentStep = step();
-    if (currentStep === previousStep) return;
-    previousStep = currentStep;
   });
 
   useDashboardAutosave({
