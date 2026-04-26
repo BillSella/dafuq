@@ -1,7 +1,6 @@
 import { clamp } from "../../widgets/baseWidget";
 import {
   deleteWidgetInDashboards,
-  projectPlacementAcrossBreakpoints,
   updateWidgetConfigInDashboards,
   updateWidgetInDashboards,
   updateWidgetVisibilityInDashboards,
@@ -10,7 +9,7 @@ import {
   type DashboardWidgetDoc,
   type WidgetPatch
 } from "../../dashboardStore";
-import { BREAKPOINT_IDS } from "../../layoutService";
+import { BREAKPOINT_IDS, projectPlacementAcrossBreakpoints } from "../../layoutService";
 import type {
   CommonWidgetSettingsPatch,
   WidgetConfigMap,
