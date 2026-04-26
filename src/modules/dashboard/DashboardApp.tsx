@@ -21,7 +21,7 @@ import {
 import {
   loadDashboardsFromStorage,
   persistDashboardsToStorage
-} from "../../dashboardPersistence";
+} from "./dashboardPersistence";
 import {
   BREAKPOINT_IDS,
   BREAKPOINT_OPTIONS,
@@ -45,9 +45,9 @@ import {
   timeWindowSummaryLabel
 } from "../../timeWindow";
 import { useSession } from "../../session/SessionContext";
-import { fetchDashboardsFromServer, saveDashboardsToServer } from "../../dashboardServerSync";
-import { useDashboardRollback } from "../../dashboard/useDashboardRollback";
-import { useDashboardAutosave } from "../../dashboard/useDashboardAutosave";
+import { fetchDashboardsFromServer, saveDashboardsToServer } from "./dashboardServerSync";
+import { useDashboardRollback } from "./useDashboardRollback";
+import { useDashboardAutosave } from "./useDashboardAutosave";
 import {
   DEBUG_WIDGET_EVENTS,
   LIBRARY_WIDGET_KEY,

@@ -1,5 +1,3 @@
-export * from "./modules/dashboard/dashboardPersistence";
-export * from "./modules/dashboard/dashboardPersistence";
 import {
   DASHBOARD_INDEX_STORAGE_KEY,
   createDashboardDoc,
@@ -7,7 +5,7 @@ import {
   normalizeDashboardDoc,
   type DashboardBreakpoint,
   type DashboardDoc
-} from "./dashboardStore";
+} from "../../dashboardStore";
 
 /**
  * LocalStorage persistence helpers for dashboard documents.

@@ -1,6 +1,6 @@
 import { type ParentProps, createContext, createSignal, onMount, useContext } from "solid-js";
 import { clearAuthTokens, getAccessToken } from "../authToken";
-import { clearPersistedDashboards } from "../dashboardPersistence";
+import { clearPersistedDashboards } from "../modules/dashboard/dashboardPersistence";
 
 /**
  * Session context for auth state and auth-related side-effect commands.

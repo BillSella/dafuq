@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   rollbackToVersion: vi.fn()
 }));
 
-vi.mock("../dashboardServerSync", () => ({
+vi.mock("../modules/dashboard/dashboardServerSync", () => ({
   fetchDashboardVersionsFromServer: mocks.fetchVersions,
   rollbackDashboardToVersion: mocks.rollbackToVersion
 }));

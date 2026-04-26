@@ -1,7 +1,7 @@
 import { createEffect, createSignal, onMount, type Accessor, type Setter } from "solid-js";
 import type { DashboardBreakpoint, DashboardDoc } from "../dashboardStore";
-import { persistDashboardsToStorage } from "../dashboardPersistence";
-import { fetchDashboardsFromServer } from "../dashboardServerSync";
+import { persistDashboardsToStorage } from "../modules/dashboard/dashboardPersistence";
+import { fetchDashboardsFromServer } from "../modules/dashboard/dashboardServerSync";
 import { getAccessToken } from "../authToken";
 import { useSession } from "../session/SessionContext";
 
