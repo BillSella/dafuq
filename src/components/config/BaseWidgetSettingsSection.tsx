@@ -1,5 +1,5 @@
 import type { JSX } from "solid-js";
-import type { DashboardBreakpoint, DashboardWidgetDoc } from "../../dashboardStore";
+import type { DashboardBreakpoint, DashboardWidgetDoc } from "../../modules/dashboard/dashboardStore";
 import { LabelFieldRow } from "../ui/LabelFieldRow";
 import { PillSelector } from "../ui/PillSelector";
 import { WidgetVisibilityField } from "./WidgetVisibilityField";

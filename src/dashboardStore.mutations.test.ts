@@ -10,7 +10,7 @@ import {
   updateWidgetConfigInDashboards,
   updateWidgetInDashboards,
   updateWidgetVisibilityInDashboards
-} from "./dashboardStore";
+} from "./modules/dashboard/dashboardStore";
 import { widgetRegistry } from "./widgets/widgetRegistry";
 
 const BREAKPOINTS: DashboardBreakpoint[] = [

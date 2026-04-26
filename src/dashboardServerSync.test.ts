@@ -4,7 +4,7 @@ import {
   fetchDashboardsFromServer,
   rollbackDashboardToVersion,
   saveDashboardsToServer
-} from "./dashboardServerSync";
+} from "./modules/dashboard/dashboardServerSync";
 
 const mockFns = vi.hoisted(() => ({
   getAccessToken: vi.fn(),

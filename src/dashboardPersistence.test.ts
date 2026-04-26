@@ -4,9 +4,9 @@ import {
   createDefaultDashboards,
   loadDashboardsFromStorage,
   persistDashboardsToStorage
-} from "./dashboardPersistence";
+} from "./modules/dashboard/dashboardPersistence";
 
-vi.mock("./dashboardStore", () => ({
+vi.mock("./modules/dashboard/dashboardStore", () => ({
   DASHBOARD_INDEX_STORAGE_KEY: "dashboard:index",
   createDashboardDoc: vi.fn(),
   makeDashboardStorageKey: (id: string) => `dashboard:${id}.json`,

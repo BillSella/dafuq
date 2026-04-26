@@ -1,6 +1,6 @@
 import { For } from "solid-js";
-import type { DashboardBreakpoint, DashboardWidgetDoc } from "../../dashboardStore";
-import { getWidgetPlacement } from "../../dashboardStore";
+import type { DashboardBreakpoint, DashboardWidgetDoc } from "../../modules/dashboard/dashboardStore";
+import { getWidgetPlacement } from "../../modules/dashboard/dashboardStore";
 import type { JSX } from "solid-js";
 import { MenuDropdown } from "../ui/MenuDropdown";
 import { ToolButton } from "../ui/ToolButton";

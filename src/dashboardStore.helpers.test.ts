@@ -6,7 +6,7 @@ import {
   upsertWidgetDisplayConfig,
   upsertWidgetPlacement,
   type DashboardWidgetDoc
-} from "./dashboardStore";
+} from "./modules/dashboard/dashboardStore";
 import { widgetRegistry } from "./widgets/widgetRegistry";
 
 function createWidgetDoc(): DashboardWidgetDoc {

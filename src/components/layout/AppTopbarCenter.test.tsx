@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, within } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppTopbarCenter } from "./AppTopbarCenter";
-import type { DashboardBreakpoint } from "../../dashboardStore";
+import type { DashboardBreakpoint } from "../../modules/dashboard/dashboardStore";
 import type { WidgetLibraryItem } from "../../widgets/widgetRegistry";
 
 type CenterProps = Parameters<typeof AppTopbarCenter>[0];
@@ -35,7 +35,17 @@ const createProps = (overrides: Partial<CenterProps> = {}): CenterProps => ({
         mobilePortrait: true,
         mobileLandscape: true
       },
-      extraGridRows: {},
+      extraGridRows: {
+        uhd8k: 0,
+        uhd4k: 0,
+        qhd2k: 0,
+        desktopFhd: 0,
+        laptopWxga: 0,
+        tabletPortrait: 0,
+        tabletLandscape: 0,
+        mobilePortrait: 0,
+        mobileLandscape: 0
+      },
       widgets: []
     },
     {
@@ -53,7 +63,17 @@ const createProps = (overrides: Partial<CenterProps> = {}): CenterProps => ({
         mobilePortrait: true,
         mobileLandscape: true
       },
-      extraGridRows: {},
+      extraGridRows: {
+        uhd8k: 0,
+        uhd4k: 0,
+        qhd2k: 0,
+        desktopFhd: 0,
+        laptopWxga: 0,
+        tabletPortrait: 0,
+        tabletLandscape: 0,
+        mobilePortrait: 0,
+        mobileLandscape: 0
+      },
       widgets: []
     }
   ],

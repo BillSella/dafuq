@@ -1,4 +1,4 @@
-import type { DashboardWidgetDoc } from "./dashboardStore";
+import type { DashboardWidgetDoc } from "./modules/dashboard/dashboardStore";
 import { widgetRegistry } from "./widgets/widgetRegistry";
 
 export type WidgetRuntimeStatus = "live" | "fallback" | "error" | "static";

@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { DashboardBreakpoint, DashboardWidgetDoc } from "../../dashboardStore";
+import type { DashboardBreakpoint, DashboardWidgetDoc } from "../../modules/dashboard/dashboardStore";
 import { widgetRegistry } from "../../widgets/widgetRegistry";
 import { BaseWidgetSettingsSection } from "./BaseWidgetSettingsSection";
 
