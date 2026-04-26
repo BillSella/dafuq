@@ -66,6 +66,7 @@ import { DashboardMainRegion } from "./DashboardMainRegion";
 import { DashboardEditorGrid } from "./DashboardEditorGrid";
 import { DashboardWidgetCard } from "./DashboardWidgetCard";
 import { DashboardWidgetConfigOverlay } from "./DashboardWidgetConfigOverlay";
+import { useDashboardInteractions } from "./useDashboardInteractions";
 import { useDashboardManagement } from "./useDashboardManagement";
 import { useDashboardRuntimeValues } from "./useDashboardRuntimeValues";
 import { useDashboardTopbarTimeWindow } from "./useDashboardTopbarTimeWindow";
@@ -497,162 +498,34 @@ export default function DashboardApp() {
     addWidgetFromMenu
   } = widgetCommands;
 
-  const onLibraryDragStart = (event: DragEvent, type: WidgetType) => {
-    if (dashboardLocked()) return;
-    bumpDebug("onLibraryDragStart", { type });
-    if (!event.dataTransfer) return;
-    event.dataTransfer.setData(LIBRARY_WIDGET_KEY, type);
-    event.dataTransfer.effectAllowed = "copy";
-    setDraggingLibraryType(type);
-    const previewSeed = getWidgetFootprintForCurrentGrid(type);
-    setDragPreview({
-      type,
-      colStart: 1,
-      rowStart: 1,
-      colSpan: previewSeed.colSpan,
-      rowSpan: previewSeed.rowSpan
-    });
-  };
-
-  const detectDraggedLibraryType = (event: DragEvent): WidgetType | null => {
-    const active = draggingLibraryType();
-    if (active) return active;
-    const transferType = event.dataTransfer?.getData(LIBRARY_WIDGET_KEY) as WidgetType | "";
-    if (transferType) return transferType;
-    const hasLibraryType = event.dataTransfer?.types?.includes(LIBRARY_WIDGET_KEY);
-    return hasLibraryType ? DEFAULT_WIDGET_TYPE : null;
-  };
-
-  const getCellFromPointer = (clientX: number, clientY: number) => {
-    if (!gridRef) return { col: 1, row: 1 };
-    const rect = gridRef.getBoundingClientRect();
-    const x = clamp(clientX - rect.left, 0, rect.width - 1);
-    const y = clamp(clientY - rect.top, 0, rect.height - 1);
-    return {
-      col: clamp(Math.floor(x / step()) + 1, 1, columns()),
-      row: clamp(Math.floor(y / step()) + 1, 1, rows())
-    };
-  };
-
-  const handleGridDrop = (event: DragEvent) => {
-    if (dashboardLocked()) return;
-    bumpDebug("handleGridDrop");
-    event.preventDefault();
-    const type = detectDraggedLibraryType(event) ?? "";
-    if (!type) return;
-    const preview = dragPreview();
-    if (preview) {
-      addWidgetAt(type, preview.colStart, preview.rowStart);
-    } else {
-      const cell = getCellFromPointer(event.clientX, event.clientY);
-      addWidgetAt(type, cell.col, cell.row);
-    }
-    setDragPreview(null);
-    setDraggingLibraryType(null);
-  };
-
-  const handleGridDragOver = (event: DragEvent) => {
-    if (dashboardLocked()) return;
-    bumpDebug("handleGridDragOver");
-    const type = detectDraggedLibraryType(event);
-    if (!type) return;
-    if (!draggingLibraryType()) {
-      setDraggingLibraryType(type);
-    }
-    event.preventDefault();
-    if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = "copy";
-    }
-    const cell = getCellFromPointer(event.clientX, event.clientY);
-    const previewSeed = getWidgetFootprintForCurrentGrid(type);
-    const colSpan = previewSeed.colSpan;
-    const rowSpan = previewSeed.rowSpan;
-    setDragPreview({
-      type,
-      colStart: clamp(cell.col, 1, columns() - colSpan + 1),
-      rowStart: clamp(cell.row, 1, rows() - rowSpan + 1),
-      colSpan,
-      rowSpan
-    });
-  };
-
-  const startWidgetDrag = (event: PointerEvent, widget: DashboardWidget) => {
-    if (dashboardLocked()) return;
-    bumpDebug("startWidgetDrag", { id: widget.id });
-    if (configWidgetId() === widget.id) {
-      setConfigWidgetId(null);
-      return;
-    }
-
-    event.preventDefault();
-    const pointerStartX = event.clientX;
-    const pointerStartY = event.clientY;
-    const initialCol = widget.colStart;
-    const initialRow = widget.rowStart;
-    setInteraction({ id: widget.id, mode: "dragging" });
-
-    const onMove = (moveEvent: PointerEvent) => {
-      const colDelta = Math.round((moveEvent.clientX - pointerStartX) / step());
-      const rowDelta = Math.round((moveEvent.clientY - pointerStartY) / step());
-      const maxCol = columns() - widget.colSpan + 1;
-      const maxRow = rows() - widget.rowSpan + 1;
-      updateWidget(widget.id, {
-        colStart: clamp(initialCol + colDelta, 1, maxCol),
-        rowStart: clamp(initialRow + rowDelta, 1, maxRow)
-      });
-      updatePanelPlacement();
-    };
-
-    const onUp = () => {
-      setInteraction(null);
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
-      window.removeEventListener("blur", onUp);
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
-    window.addEventListener("blur", onUp);
-  };
-
-  const startWidgetResize = (event: PointerEvent, widget: DashboardWidget) => {
-    if (dashboardLocked()) return;
-    bumpDebug("startWidgetResize", { id: widget.id });
-    event.preventDefault();
-    event.stopPropagation();
-    const pointerStartX = event.clientX;
-    const pointerStartY = event.clientY;
-    const initialColSpan = widget.colSpan;
-    const initialRowSpan = widget.rowSpan;
-    setInteraction({ id: widget.id, mode: "resizing" });
-
-    const onMove = (moveEvent: PointerEvent) => {
-      const colDelta = Math.round((moveEvent.clientX - pointerStartX) / step());
-      const rowDelta = Math.round((moveEvent.clientY - pointerStartY) / step());
-      const minSpanX = Math.max(1, Math.ceil(16 / step()));
-      const minSpanY = Math.max(1, Math.ceil(16 / step()));
-      const maxSpanX = columns() - widget.colStart + 1;
-      const maxSpanY = rows() - widget.rowStart + 1;
-      updateWidget(widget.id, {
-        colSpan: clamp(initialColSpan + colDelta, minSpanX, maxSpanX),
-        rowSpan: clamp(initialRowSpan + rowDelta, minSpanY, maxSpanY)
-      });
-      updatePanelPlacement();
-    };
-
-    const onUp = () => {
-      setInteraction(null);
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
-      window.removeEventListener("blur", onUp);
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
-    window.addEventListener("blur", onUp);
-  };
+  const interactions = useDashboardInteractions({
+    dashboardLocked,
+    bumpDebug,
+    draggingLibraryType,
+    setDraggingLibraryType,
+    setDragPreview,
+    dragPreview,
+    getWidgetFootprintForCurrentGrid,
+    addWidgetAt,
+    columns,
+    rows,
+    step,
+    gridRef: () => gridRef,
+    configWidgetId,
+    setConfigWidgetId,
+    interaction,
+    setInteraction,
+    updateWidget,
+    updatePanelPlacement,
+    libraryWidgetKey: LIBRARY_WIDGET_KEY
+  });
+  const {
+    onLibraryDragStart,
+    handleGridDrop,
+    handleGridDragOver,
+    startWidgetDrag,
+    startWidgetResize
+  } = interactions;
 
   createEffect(() => {
     if (!DEBUG_WIDGET_EVENTS) return;
