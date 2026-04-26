@@ -25,7 +25,6 @@ import {
 import {
   BREAKPOINT_IDS,
   BREAKPOINT_OPTIONS,
-  detectBreakpointFromViewport,
   getGridSizeForBreakpoint
 } from "../../layoutService";
 import {
@@ -66,6 +65,7 @@ import { DashboardMainRegion } from "./DashboardMainRegion";
 import { DashboardEditorGrid } from "./DashboardEditorGrid";
 import { DashboardWidgetCard } from "./DashboardWidgetCard";
 import { DashboardWidgetConfigOverlay } from "./DashboardWidgetConfigOverlay";
+import { useDashboardBreakpointEffects } from "./useDashboardBreakpointEffects";
 import { useDashboardInteractions } from "./useDashboardInteractions";
 import { useDashboardManagement } from "./useDashboardManagement";
 import { useDashboardRuntimeValues } from "./useDashboardRuntimeValues";
@@ -526,6 +526,17 @@ export default function DashboardApp() {
     startWidgetDrag,
     startWidgetResize
   } = interactions;
+  useDashboardBreakpointEffects({
+    hasManualBreakpointSelection,
+    gridViewportWidth,
+    gridViewportHeight,
+    isBreakpointEnabledForActiveDashboard,
+    preferredEnabledBreakpoint,
+    selectedBreakpoint,
+    setSelectedBreakpoint,
+    selectedGridStep: () => selectedGridSpec().step,
+    setGridUnitSize
+  });
 
   createEffect(() => {
     if (!DEBUG_WIDGET_EVENTS) return;
@@ -633,33 +644,6 @@ export default function DashboardApp() {
   createEffect(() => {
     if (dashboardLocked()) return;
     setDashboardMenuOpen(false);
-  });
-
-  createEffect(() => {
-    setGridUnitSize(selectedGridSpec().step);
-  });
-
-  createEffect(() => {
-    if (hasManualBreakpointSelection()) return;
-    const width = gridViewportWidth();
-    const height = gridViewportHeight();
-    const detected = detectBreakpointFromViewport(width, height);
-    const next =
-      isBreakpointEnabledForActiveDashboard(detected)
-        ? detected
-        : preferredEnabledBreakpoint() ?? detected;
-    if (selectedBreakpoint() !== next) {
-      setSelectedBreakpoint(next);
-    }
-  });
-
-  createEffect(() => {
-    const current = selectedBreakpoint();
-    if (isBreakpointEnabledForActiveDashboard(current)) return;
-    const fallback = preferredEnabledBreakpoint();
-    if (fallback) {
-      setSelectedBreakpoint(fallback);
-    }
   });
 
   useDismissOnOutsideClick({
