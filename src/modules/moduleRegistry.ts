@@ -17,7 +17,7 @@ const APP_MODULE_BY_ID: Record<AppModuleId, AppModuleDefinition> = {
   help: {
     id: "help",
     topbarTitle: "Help",
-    placeholderMessage: "Help view placeholder. We can add status-dot legend and usage docs here."
+    placeholderMessage: "Help documentation module."
   },
   userSettings: {
     id: "userSettings",
