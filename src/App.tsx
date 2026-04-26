@@ -1,5 +1,5 @@
 /**
- * Authenticated app entry. The full workspace UI is implemented in the dashboard
- * module (`DashboardApp`) until additional modules are split behind the shell.
+ * Authenticated app entry via application-layer workspace root.
+ * Module state is owned here and delegated to concrete modules.
  */
-export { default } from "./modules/dashboard/DashboardApp";
+export { default } from "./modules/WorkspaceApp";

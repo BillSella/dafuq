@@ -77,11 +77,22 @@ import { getAppModule } from "../moduleRegistry";
 import type { AppModuleId } from "../moduleTypes";
 import { WorkspaceShell } from "../shell/WorkspaceShell";
 
+type DashboardAppProps = {
+  /**
+   * Optional externally controlled active module id from app-level shell.
+   */
+  activeNavTool?: AppModuleId;
+  /**
+   * Optional app-level module selection callback.
+   */
+  onSelectNavTool?: (moduleId: AppModuleId) => void;
+};
+
 /**
  * Authenticated workspace: dashboard state and topbar wiring, hosted inside
  * {@link WorkspaceShell}. Re-exported as default from `App.tsx`.
  */
-export default function DashboardApp() {
+export default function DashboardApp(props: DashboardAppProps = {}) {
   const session = useSession();
   const initialDashboards = loadDashboardsFromStorage(BREAKPOINT_IDS);
   const [gridUnitSize, setGridUnitSize] = createSignal(16);
@@ -272,42 +283,42 @@ export default function DashboardApp() {
     () => activeDashboardDoc()?.widgets.find((widget) => widget.id === configWidgetId()) ?? null
   );
   const activeWidget = createMemo(() =>
-    widgets().find((widget) => widget.id === configWidgetId()) ?? null
+    widgets().find((widget) => widget.id === configWidgetId()) ?? undefined
   );
   const activeGaugeWidget = createMemo(() =>
     activeWidget()?.type === "numberGauge"
       ? (activeWidget() as WidgetStateByType<"numberGauge">)
-      : null
+      : undefined
   );
   const activeLabelWidget = createMemo(() =>
     activeWidget()?.type === "label"
       ? (activeWidget() as WidgetStateByType<"label">)
-      : null
+      : undefined
   );
   const activeDonutWidget = createMemo(() =>
     activeWidget()?.type === "donutChart"
       ? (activeWidget() as WidgetStateByType<"donutChart">)
-      : null
+      : undefined
   );
   const activeBarWidget = createMemo(() =>
     activeWidget()?.type === "barChart"
       ? (activeWidget() as WidgetStateByType<"barChart">)
-      : null
+      : undefined
   );
   const activeSparklineWidget = createMemo(() =>
     activeWidget()?.type === "sparklineChart"
       ? (activeWidget() as WidgetStateByType<"sparklineChart">)
-      : null
+      : undefined
   );
   const activeTimeSeriesWidget = createMemo(() =>
     activeWidget()?.type === "timeSeriesChart"
       ? (activeWidget() as WidgetStateByType<"timeSeriesChart">)
-      : null
+      : undefined
   );
   const activeMapWidget = createMemo(() =>
     activeWidget()?.type === "mapNetwork"
       ? (activeWidget() as WidgetStateByType<"mapNetwork">)
-      : null
+      : undefined
   );
   const activeWidgetCommonLabel = createMemo(() => {
     const widget = activeWidget();
@@ -369,8 +380,17 @@ export default function DashboardApp() {
     });
   const selectNavTool = (moduleId: AppModuleId) => {
     if (!canAccessModule(moduleId)) return;
+    if (props.onSelectNavTool) {
+      props.onSelectNavTool(moduleId);
+      return;
+    }
     setActiveNavTool(moduleId);
   };
+  createEffect(() => {
+    if (!props.activeNavTool) return;
+    if (props.activeNavTool === activeNavTool()) return;
+    setActiveNavTool(props.activeNavTool);
+  });
   const fontSizeValue = (size: GaugeConfig["fontSize"]) => {
     if (size === "small") return "0.82rem";
     if (size === "large") return "1.2rem";
