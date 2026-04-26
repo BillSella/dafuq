@@ -8,11 +8,10 @@ describe("NonDashboardModuleHost", () => {
     expect(screen.getByText("Traffic Analysis view placeholder.")).toBeInTheDocument();
   });
 
-  it("renders help module placeholder", () => {
+  it("renders help module documentation", () => {
     render(() => <NonDashboardModuleHost moduleId="help" />);
-    expect(
-      screen.getByText(/Help view placeholder\. We can add status-dot legend and usage docs here\./)
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Help & Documentation" })).toBeInTheDocument();
+    expect(screen.getByText("Dashboard Module")).toBeInTheDocument();
   });
 
   it("renders access denied placeholder when policy blocks module", () => {
