@@ -1,17 +1,14 @@
 import { APP_MODULE_IDS } from "../moduleRegistry";
-import { dashboardHelpDoc } from "../dashboard/dashboardHelpDoc";
-import { settingsHelpDoc } from "../settings/settingsHelpDoc";
-import { trafficHelpDoc } from "../traffic/trafficHelpDoc";
-import { userSettingsHelpDoc } from "../user/userSettingsHelpDoc";
+import { APP_MODULE_CONTRACTS } from "../moduleContracts";
 import { appHelpDoc } from "./appHelpDoc";
 import type { HelpDocContributor, ModuleHelpDoc } from "./helpDocTypes";
 
 const HELP_DOC_CONTRIBUTORS: HelpDocContributor[] = [
   { id: "application", docs: [appHelpDoc] },
-  { id: "dashboards", docs: [dashboardHelpDoc] },
-  { id: "trafficAnalysis", docs: [trafficHelpDoc] },
-  { id: "settings", docs: [settingsHelpDoc] },
-  { id: "userSettings", docs: [userSettingsHelpDoc] }
+  ...APP_MODULE_CONTRACTS.map((contract) => ({
+    id: contract.id,
+    docs: [...(contract.helpDocs ?? [])]
+  }))
 ];
 
 /**

@@ -1,4 +1,5 @@
 import type { AppModuleId } from "./moduleTypes";
+import { getModuleContract } from "./moduleContracts";
 
 export type ModuleAccessContext = {
   isAuthenticated: boolean;
@@ -8,14 +9,8 @@ export type ModuleAccessContext = {
   claims?: readonly string[];
 };
 
-const MODULE_REQUIRED_CLAIMS: Partial<Record<AppModuleId, readonly string[]>> = {
-  trafficAnalysis: ["module:trafficAnalysis:read"],
-  settings: ["module:settings:read"],
-  userSettings: ["module:userSettings:read"]
-};
-
 function hasAnyRequiredClaim(moduleId: AppModuleId, claims: readonly string[]): boolean {
-  const requiredClaims = MODULE_REQUIRED_CLAIMS[moduleId];
+  const requiredClaims = getModuleContract(moduleId).requiredClaims;
   if (!requiredClaims || requiredClaims.length === 0) return true;
   const claimSet = new Set(claims);
   return requiredClaims.some((claim) => claimSet.has(claim));
@@ -34,7 +29,7 @@ export function hasModuleAccess(moduleId: AppModuleId, context: ModuleAccessCont
 
 export function getModuleAccessDeniedMessage(moduleId: AppModuleId): string {
   if (moduleId === "dashboards") return "";
-  const requiredClaims = MODULE_REQUIRED_CLAIMS[moduleId];
+  const requiredClaims = getModuleContract(moduleId).requiredClaims;
   if (requiredClaims?.length) {
     return `You do not currently have access to this module. Required claim: ${requiredClaims[0]}.`;
   }

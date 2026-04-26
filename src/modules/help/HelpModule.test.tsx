@@ -9,6 +9,7 @@ describe("HelpModule", () => {
     expect(screen.getByRole("heading", { name: "Help & Documentation" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Application Overview" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Dashboard Module" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Help Module" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Traffic Analysis Module" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Application Settings Module" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "User Settings Module" })).toBeInTheDocument();
