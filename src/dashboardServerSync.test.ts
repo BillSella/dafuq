@@ -15,7 +15,7 @@ vi.mock("./authToken", () => ({
   getAccessToken: mockFns.getAccessToken
 }));
 
-vi.mock("./dashboardStore", () => ({
+vi.mock("./modules/dashboard/dashboardStore", () => ({
   normalizeDashboardDoc: mockFns.normalizeDashboardDoc
 }));
 
