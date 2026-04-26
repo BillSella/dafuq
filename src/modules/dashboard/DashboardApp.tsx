@@ -72,6 +72,7 @@ import { useDashboardRuntimeValues } from "./useDashboardRuntimeValues";
 import { useDashboardTopbarTimeWindow } from "./useDashboardTopbarTimeWindow";
 import { useDashboardWidgetCommands } from "./useDashboardWidgetCommands";
 import { useDashboardWorkspaceEffects } from "./useDashboardWorkspaceEffects";
+import { hasModuleAccess } from "../moduleAccessPolicy";
 import { getAppModule } from "../moduleRegistry";
 import type { AppModuleId } from "../moduleTypes";
 import { WorkspaceShell } from "../shell/WorkspaceShell";
@@ -362,6 +363,14 @@ export default function DashboardApp() {
     return enabled[0] ?? null;
   });
   const activeToolTitle = createMemo(() => getAppModule(activeNavTool()).topbarTitle);
+  const canAccessModule = (moduleId: AppModuleId) =>
+    hasModuleAccess(moduleId, {
+      isAuthenticated: session.isAuthenticated()
+    });
+  const selectNavTool = (moduleId: AppModuleId) => {
+    if (!canAccessModule(moduleId)) return;
+    setActiveNavTool(moduleId);
+  };
   const fontSizeValue = (size: GaugeConfig["fontSize"]) => {
     if (size === "small") return "0.82rem";
     if (size === "large") return "1.2rem";
@@ -689,7 +698,7 @@ export default function DashboardApp() {
   return (
     <WorkspaceShell
       activeNavTool={activeNavTool()}
-      onSelectNavTool={setActiveNavTool}
+      onSelectNavTool={selectNavTool}
       toolSwitchLocked={!dashboardLocked()}
       topbarCenter={() => (
         <AppTopbarCenter
@@ -826,14 +835,14 @@ export default function DashboardApp() {
           onToggleUserMenu={() => setUserMenuOpen((open) => !open)}
           onOpenUserSettings={() => {
             if (!dashboardLocked()) return;
-            setActiveNavTool("userSettings");
+            selectNavTool("userSettings");
             setUserMenuOpen(false);
           }}
           onCloseUserMenu={() => setUserMenuOpen(false)}
         />
       )}
       main={() => (
-          <DashboardMainRegion activeNavTool={activeNavTool}>
+          <DashboardMainRegion activeNavTool={activeNavTool} canAccessModule={canAccessModule}>
           <>
           <DashboardEditorGrid
             gridShellRef={(el) => {

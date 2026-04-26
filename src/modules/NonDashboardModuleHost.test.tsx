@@ -14,4 +14,9 @@ describe("NonDashboardModuleHost", () => {
       screen.getByText(/Help view placeholder\. We can add status-dot legend and usage docs here\./)
     ).toBeInTheDocument();
   });
+
+  it("renders access denied placeholder when policy blocks module", () => {
+    render(() => <NonDashboardModuleHost moduleId="settings" canAccessModule={() => false} />);
+    expect(screen.getByText("You do not currently have access to this module.")).toBeInTheDocument();
+  });
 });

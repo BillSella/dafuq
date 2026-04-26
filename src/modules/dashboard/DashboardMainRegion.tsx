@@ -5,6 +5,7 @@ import { DashboardModule } from "./DashboardModule";
 
 type DashboardMainRegionProps = {
   activeNavTool: Accessor<AppModuleId>;
+  canAccessModule?: (moduleId: AppModuleId) => boolean;
 };
 
 /**
@@ -14,7 +15,12 @@ export const DashboardMainRegion: ParentComponent<DashboardMainRegionProps> = (p
   return (
     <Show
       when={props.activeNavTool() === "dashboards"}
-      fallback={<NonDashboardModuleHost moduleId={props.activeNavTool()} />}
+      fallback={
+        <NonDashboardModuleHost
+          moduleId={props.activeNavTool()}
+          canAccessModule={props.canAccessModule}
+        />
+      }
     >
       <DashboardModule>{props.children}</DashboardModule>
     </Show>
