@@ -1,6 +1,38 @@
 const ACCESS = "dafuq_access_token";
 const REFRESH = "dafuq_refresh_token";
 
+type JwtPayload = Record<string, unknown>;
+
+function normalizeClaimValue(value: unknown): string[] {
+  if (typeof value === "string") {
+    return value
+      .split(" ")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === "string" && entry.length > 0);
+  }
+  return [];
+}
+
+function decodeJwtPayload(token: string): JwtPayload | null {
+  const parts = token.split(".");
+  if (parts.length < 2) return null;
+  try {
+    const payload = parts[1]
+      .replace(/-/g, "+")
+      .replace(/_/g, "/")
+      .padEnd(Math.ceil(parts[1].length / 4) * 4, "=");
+    const json = window.atob(payload);
+    const parsed = JSON.parse(json) as unknown;
+    if (typeof parsed !== "object" || parsed === null) return null;
+    return parsed as JwtPayload;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * OAuth token storage helpers for browser-based auth state.
  *
@@ -46,6 +78,24 @@ export function setRefreshToken(token: string) {
 export function clearAuthTokens() {
   window.localStorage.removeItem(ACCESS);
   window.localStorage.removeItem(REFRESH);
+}
+
+/**
+ * Reads normalized JWT claims from the access token payload.
+ * Supports common providers: `scope`, `scp`, `roles`, and `permissions`.
+ */
+export function getAccessTokenClaims(): string[] {
+  const token = getAccessToken();
+  if (!token || typeof window === "undefined") return [];
+  const payload = decodeJwtPayload(token);
+  if (!payload) return [];
+  const claims = [
+    ...normalizeClaimValue(payload.scope),
+    ...normalizeClaimValue(payload.scp),
+    ...normalizeClaimValue(payload.roles),
+    ...normalizeClaimValue(payload.permissions)
+  ];
+  return [...new Set(claims)];
 }
 
 /**

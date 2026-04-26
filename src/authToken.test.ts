@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   captureOAuthTokensFromUrl,
   clearAuthTokens,
+  getAccessTokenClaims,
   getAccessToken,
   getRefreshToken,
   setAccessToken,
@@ -14,6 +15,24 @@ afterEach(() => {
 });
 
 describe("authToken", () => {
+  it("extracts normalized claims from JWT-like access token payload", () => {
+    const payload = window.btoa(
+      JSON.stringify({
+        scope: "module:settings:read module:userSettings:read",
+        roles: ["role:admin"],
+        permissions: ["perm:write"]
+      })
+    );
+    localStorage.setItem("dafuq_access_token", `header.${payload}.sig`);
+
+    expect(getAccessTokenClaims()).toEqual([
+      "module:settings:read",
+      "module:userSettings:read",
+      "role:admin",
+      "perm:write"
+    ]);
+  });
+
   it("sets, gets, and clears tokens", () => {
     setAccessToken("access-1");
     setRefreshToken("refresh-1");
@@ -23,6 +42,7 @@ describe("authToken", () => {
     clearAuthTokens();
     expect(getAccessToken()).toBeNull();
     expect(getRefreshToken()).toBeNull();
+    expect(getAccessTokenClaims()).toEqual([]);
   });
 
   it("captures OAuth tokens from URL hash and clears hash", () => {

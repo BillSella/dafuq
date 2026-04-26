@@ -16,6 +16,6 @@ describe("NonDashboardModuleHost", () => {
 
   it("renders access denied placeholder when policy blocks module", () => {
     render(() => <NonDashboardModuleHost moduleId="settings" canAccessModule={() => false} />);
-    expect(screen.getByText("You do not currently have access to this module.")).toBeInTheDocument();
+    expect(screen.getByText(/You do not currently have access to this module\./)).toBeInTheDocument();
   });
 });

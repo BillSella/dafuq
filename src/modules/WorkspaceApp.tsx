@@ -13,7 +13,10 @@ export default function WorkspaceApp() {
   const session = useSession();
   const [activeNavTool, setActiveNavTool] = createSignal<AppModuleId>("dashboards");
   const canAccessModule = (moduleId: AppModuleId) =>
-    hasModuleAccess(moduleId, { isAuthenticated: session.isAuthenticated() });
+    hasModuleAccess(moduleId, {
+      isAuthenticated: session.isAuthenticated(),
+      claims: session.claims()
+    });
 
   const onSelectNavTool = (moduleId: AppModuleId) => {
     if (!canAccessModule(moduleId)) return;

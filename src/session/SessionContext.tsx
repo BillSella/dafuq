@@ -1,5 +1,5 @@
 import { type ParentProps, createContext, createSignal, onMount, useContext } from "solid-js";
-import { clearAuthTokens, getAccessToken } from "../authToken";
+import { clearAuthTokens, getAccessToken, getAccessTokenClaims } from "../authToken";
 import { clearPersistedDashboards } from "../modules/dashboard/dashboardPersistence";
 
 /**
@@ -23,6 +23,8 @@ export type SessionValue = {
   logIn: () => void;
   /** Clear local tokens, notify backend logout, and mark session as signed out. */
   logOut: () => void;
+  /** Normalized JWT scopes/roles for module policy decisions. */
+  claims: () => readonly string[];
 };
 
 const SessionContext = createContext<SessionValue | undefined>(undefined);
@@ -34,12 +36,14 @@ export function SessionProvider(props: ParentProps) {
   const [authenticated, setAuthenticated] = createSignal(
     typeof window !== "undefined" && !!getAccessToken()
   );
+  const [claimsState, setClaimsState] = createSignal<readonly string[]>(getAccessTokenClaims());
 
   /**
    * Synchronizes in-memory auth state from token persistence.
    */
   const syncFromStorage = () => {
     setAuthenticated(!!getAccessToken());
+    setClaimsState(getAccessTokenClaims());
   };
 
   /**
@@ -56,6 +60,7 @@ export function SessionProvider(props: ParentProps) {
     clearAuthTokens();
     clearPersistedDashboards();
     setAuthenticated(false);
+    setClaimsState([]);
     void fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
   };
 
@@ -68,7 +73,8 @@ export function SessionProvider(props: ParentProps) {
     isAuthenticated: () => authenticated(),
     syncFromStorage,
     logIn,
-    logOut
+    logOut,
+    claims: () => claimsState()
   };
 
   return <SessionContext.Provider value={value}>{props.children}</SessionContext.Provider>;

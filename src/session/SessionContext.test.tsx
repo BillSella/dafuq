@@ -12,9 +12,11 @@ afterEach(() => {
 function SessionProbe() {
   const session = useSession();
   const authText = createMemo(() => (session.isAuthenticated() ? "yes" : "no"));
+  const claimsText = createMemo(() => session.claims().join(","));
   return (
     <div>
       <div data-testid="auth-state">{authText()}</div>
+      <div data-testid="claim-state">{claimsText()}</div>
       <button type="button" onClick={() => session.syncFromStorage()}>
         sync
       </button>
@@ -33,7 +35,8 @@ describe("SessionContext", () => {
   });
 
   it("initializes auth from storage and syncs when requested", async () => {
-    localStorage.setItem("dafuq_access_token", "token-1");
+    const payload = window.btoa(JSON.stringify({ scope: "module:help:read module:settings:read" }));
+    localStorage.setItem("dafuq_access_token", `header.${payload}.sig`);
     render(() => (
       <SessionProvider>
         <SessionProbe />
@@ -41,10 +44,14 @@ describe("SessionContext", () => {
     ));
 
     expect(screen.getByTestId("auth-state")).toHaveTextContent("yes");
+    expect(screen.getByTestId("claim-state")).toHaveTextContent(
+      "module:help:read,module:settings:read"
+    );
 
     localStorage.removeItem("dafuq_access_token");
     await fireEvent.click(screen.getByRole("button", { name: "sync" }));
     expect(screen.getByTestId("auth-state")).toHaveTextContent("no");
+    expect(screen.getByTestId("claim-state")).toHaveTextContent("");
   });
 
   it("logout clears auth/dashboard storage and posts logout", async () => {
