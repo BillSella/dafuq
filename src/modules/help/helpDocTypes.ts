@@ -12,3 +12,8 @@ export type ModuleHelpDoc = {
   summary: string;
   sections: HelpDocSection[];
 };
+
+export type HelpDocContributor = {
+  id: string;
+  docs: readonly ModuleHelpDoc[];
+};
