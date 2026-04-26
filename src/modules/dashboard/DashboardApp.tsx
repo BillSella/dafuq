@@ -72,27 +72,30 @@ import { useDashboardRuntimeValues } from "./useDashboardRuntimeValues";
 import { useDashboardTopbarTimeWindow } from "./useDashboardTopbarTimeWindow";
 import { useDashboardWidgetCommands } from "./useDashboardWidgetCommands";
 import { useDashboardWorkspaceEffects } from "./useDashboardWorkspaceEffects";
-import { hasModuleAccess } from "../moduleAccessPolicy";
 import { getAppModule } from "../moduleRegistry";
 import type { AppModuleId } from "../moduleTypes";
 import { WorkspaceShell } from "../shell/WorkspaceShell";
 
 type DashboardAppProps = {
   /**
-   * Optional externally controlled active module id from app-level shell.
+   * App-level active module id owned by WorkspaceApp.
    */
-  activeNavTool?: AppModuleId;
+  activeNavTool: AppModuleId;
   /**
-   * Optional app-level module selection callback.
+   * App-level module selection callback owned by WorkspaceApp.
    */
-  onSelectNavTool?: (moduleId: AppModuleId) => void;
+  onSelectNavTool: (moduleId: AppModuleId) => void;
+  /**
+   * App-level module access gate for non-dashboard module hosting.
+   */
+  canAccessModule: (moduleId: AppModuleId) => boolean;
 };
 
 /**
  * Authenticated workspace: dashboard state and topbar wiring, hosted inside
  * {@link WorkspaceShell}. Re-exported as default from `App.tsx`.
  */
-export default function DashboardApp(props: DashboardAppProps = {}) {
+export default function DashboardApp(props: DashboardAppProps) {
   const session = useSession();
   const initialDashboards = loadDashboardsFromStorage(BREAKPOINT_IDS);
   const [gridUnitSize, setGridUnitSize] = createSignal(16);
@@ -116,7 +119,7 @@ export default function DashboardApp(props: DashboardAppProps = {}) {
   } | null>(null);
   const [draggingLibraryType, setDraggingLibraryType] = createSignal<WidgetType | null>(null);
   const [debugCounts, setDebugCounts] = createSignal<Record<string, number>>({});
-  const [activeNavTool, setActiveNavTool] = createSignal<AppModuleId>("dashboards");
+  const activeNavTool = () => props.activeNavTool;
   const [userMenuOpen, setUserMenuOpen] = createSignal(false);
   const topbarTime = useDashboardTopbarTimeWindow();
   const {
@@ -374,23 +377,9 @@ export default function DashboardApp(props: DashboardAppProps = {}) {
     return enabled[0] ?? null;
   });
   const activeToolTitle = createMemo(() => getAppModule(activeNavTool()).topbarTitle);
-  const canAccessModule = (moduleId: AppModuleId) =>
-    hasModuleAccess(moduleId, {
-      isAuthenticated: session.isAuthenticated()
-    });
   const selectNavTool = (moduleId: AppModuleId) => {
-    if (!canAccessModule(moduleId)) return;
-    if (props.onSelectNavTool) {
-      props.onSelectNavTool(moduleId);
-      return;
-    }
-    setActiveNavTool(moduleId);
+    props.onSelectNavTool(moduleId);
   };
-  createEffect(() => {
-    if (!props.activeNavTool) return;
-    if (props.activeNavTool === activeNavTool()) return;
-    setActiveNavTool(props.activeNavTool);
-  });
   const fontSizeValue = (size: GaugeConfig["fontSize"]) => {
     if (size === "small") return "0.82rem";
     if (size === "large") return "1.2rem";
@@ -862,7 +851,7 @@ export default function DashboardApp(props: DashboardAppProps = {}) {
         />
       )}
       main={() => (
-          <DashboardMainRegion activeNavTool={activeNavTool} canAccessModule={canAccessModule}>
+          <DashboardMainRegion activeNavTool={activeNavTool} canAccessModule={props.canAccessModule}>
           <>
           <DashboardEditorGrid
             gridShellRef={(el) => {

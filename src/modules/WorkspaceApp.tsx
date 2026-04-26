@@ -11,13 +11,19 @@ import type { AppModuleId } from "./moduleTypes";
 export default function WorkspaceApp() {
   const session = useSession();
   const [activeNavTool, setActiveNavTool] = createSignal<AppModuleId>("dashboards");
+  const canAccessModule = (moduleId: AppModuleId) =>
+    hasModuleAccess(moduleId, { isAuthenticated: session.isAuthenticated() });
 
   const onSelectNavTool = (moduleId: AppModuleId) => {
-    if (!hasModuleAccess(moduleId, { isAuthenticated: session.isAuthenticated() })) return;
+    if (!canAccessModule(moduleId)) return;
     setActiveNavTool(moduleId);
   };
 
   return (
-    <DashboardApp activeNavTool={activeNavTool()} onSelectNavTool={onSelectNavTool} />
+    <DashboardApp
+      activeNavTool={activeNavTool()}
+      onSelectNavTool={onSelectNavTool}
+      canAccessModule={canAccessModule}
+    />
   );
 }
