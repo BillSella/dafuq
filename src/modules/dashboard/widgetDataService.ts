@@ -1,5 +1,5 @@
-import type { DashboardWidgetDoc } from "./modules/dashboard/dashboardStore";
-import { widgetRegistry } from "./widgets/widgetRegistry";
+import type { DashboardWidgetDoc } from "./dashboardStore";
+import { widgetRegistry } from "../../widgets/widgetRegistry";
 
 export type WidgetRuntimeStatus = "live" | "fallback" | "error" | "static";
 export type WidgetRuntimeResult = {

@@ -1,7 +1,7 @@
 import { createEffect, createSignal, onCleanup, type Accessor } from "solid-js";
 import type { DashboardDoc, DashboardWidgetDoc } from "./dashboardStore";
 import { resolveTimeRange, type TimeWindowState } from "./timeWindow";
-import { fetchWidgetRuntimeValue, getWidgetGroupKey, type WidgetRuntimeStatus } from "../../widgetDataService";
+import { fetchWidgetRuntimeValue, getWidgetGroupKey, type WidgetRuntimeStatus } from "./widgetDataService";
 import type { AppModuleId } from "../moduleTypes";
 
 type UseDashboardRuntimeValuesOptions = {

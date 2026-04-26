@@ -13,7 +13,7 @@ import { SparklineWidget } from "../../widgets/sparklineWidget";
 import type { TimeSeriesConfig } from "../../widgets/timeSeriesWidget";
 import { TimeSeriesWidget } from "../../widgets/timeSeriesWidget";
 import type { WidgetStateByType } from "../../widgets/widgetRegistry";
-import type { WidgetRuntimeStatus } from "../../widgetDataService";
+import type { WidgetRuntimeStatus } from "./widgetDataService";
 import type { DashboardWidget } from "./dashboardEditorConstants";
 
 type DashboardWidgetCardProps = {
