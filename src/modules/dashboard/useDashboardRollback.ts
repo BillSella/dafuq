@@ -1,5 +1,5 @@
 import { createSignal, type Accessor, type Setter } from "solid-js";
-import type { DashboardBreakpoint, DashboardDoc } from "../../dashboardStore";
+import type { DashboardBreakpoint, DashboardDoc } from "./dashboardStore";
 import {
   fetchDashboardVersionsFromServer,
   rollbackDashboardToVersion

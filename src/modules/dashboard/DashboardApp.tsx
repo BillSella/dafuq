@@ -17,7 +17,7 @@ import {
   upsertWidgetPlacement,
   type WidgetDisplayConfig,
   ensureWidgetsFitGridInDashboards,
-} from "../../dashboardStore";
+} from "./dashboardStore";
 import {
   loadDashboardsFromStorage,
   persistDashboardsToStorage
@@ -26,7 +26,7 @@ import {
   BREAKPOINT_IDS,
   BREAKPOINT_OPTIONS,
   getGridSizeForBreakpoint
-} from "../../layoutService";
+} from "./layoutService";
 import {
   DEFAULT_WIDGET_TYPE,
   type WidgetType,
@@ -43,7 +43,7 @@ import {
   RELATIVE_PRESETS,
   timeWindowButtonLabel,
   timeWindowSummaryLabel
-} from "../../timeWindow";
+} from "./timeWindow";
 import { useSession } from "../../session/SessionContext";
 import { fetchDashboardsFromServer, saveDashboardsToServer } from "./dashboardServerSync";
 import { useDashboardRollback } from "./useDashboardRollback";

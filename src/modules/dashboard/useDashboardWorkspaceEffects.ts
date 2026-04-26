@@ -1,7 +1,7 @@
 import { createEffect, onCleanup, type Accessor, type Setter } from "solid-js";
-import type { DashboardBreakpoint, DashboardDoc } from "../../dashboardStore";
-import { BREAKPOINT_IDS } from "../../layoutService";
-import { getWidgetPlacement } from "../../dashboardStore";
+import type { DashboardBreakpoint, DashboardDoc } from "./dashboardStore";
+import { BREAKPOINT_IDS } from "./layoutService";
+import { getWidgetPlacement } from "./dashboardStore";
 import { widgetRegistry } from "../../widgets/widgetRegistry";
 
 type UseDashboardWorkspaceEffectsOptions = {

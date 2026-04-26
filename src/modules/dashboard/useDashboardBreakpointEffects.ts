@@ -1,6 +1,6 @@
 import { createEffect, type Accessor, type Setter } from "solid-js";
-import type { DashboardBreakpoint } from "../../dashboardStore";
-import { detectBreakpointFromViewport } from "../../layoutService";
+import type { DashboardBreakpoint } from "./dashboardStore";
+import { detectBreakpointFromViewport } from "./layoutService";
 
 type UseDashboardBreakpointEffectsOptions = {
   hasManualBreakpointSelection: Accessor<boolean>;

@@ -6,7 +6,7 @@ import {
   saveTimeWindowToStorage,
   toDateTimeLocalValue,
   type TimeWindowState
-} from "../../timeWindow";
+} from "./timeWindow";
 
 function formatLocalClock(): string {
   return new Date().toLocaleTimeString(undefined, {

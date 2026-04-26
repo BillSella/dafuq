@@ -8,8 +8,8 @@ import {
   type DashboardDoc,
   type DashboardWidgetDoc,
   type WidgetPatch
-} from "../../dashboardStore";
-import { BREAKPOINT_IDS, projectPlacementAcrossBreakpoints } from "../../layoutService";
+} from "./dashboardStore";
+import { BREAKPOINT_IDS, projectPlacementAcrossBreakpoints } from "./layoutService";
 import type {
   CommonWidgetSettingsPatch,
   WidgetConfigMap,

@@ -2,7 +2,7 @@ import {
   type DashboardBreakpoint,
   type DashboardDoc,
   normalizeDashboardDoc
-} from "../../dashboardStore";
+} from "./dashboardStore";
 import { getAccessToken } from "../../authToken";
 
 type DashboardsEnvelope = {

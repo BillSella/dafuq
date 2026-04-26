@@ -1,5 +1,5 @@
 import { createEffect, onCleanup, type Accessor } from "solid-js";
-import type { DashboardDoc } from "../../dashboardStore";
+import type { DashboardDoc } from "./dashboardStore";
 
 type UseDashboardAutosaveOptions = {
   dashboards: Accessor<DashboardDoc[]>;

@@ -5,7 +5,7 @@ import {
   normalizeDashboardDoc,
   type DashboardBreakpoint,
   type DashboardDoc
-} from "../../dashboardStore";
+} from "./dashboardStore";
 
 /**
  * LocalStorage persistence helpers for dashboard documents.

@@ -5,8 +5,8 @@ import {
   UPDATE_FREQUENCY_OPTIONS,
   type DashboardBreakpoint,
   type DashboardDoc
-} from "../../dashboardStore";
-import { BREAKPOINT_IDS, BREAKPOINT_OPTIONS } from "../../layoutService";
+} from "./dashboardStore";
+import { BREAKPOINT_IDS, BREAKPOINT_OPTIONS } from "./layoutService";
 
 type UseDashboardManagementOptions = {
   dashboards: Accessor<DashboardDoc[]>;
