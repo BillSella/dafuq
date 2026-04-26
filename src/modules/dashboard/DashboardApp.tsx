@@ -45,7 +45,6 @@ import {
   timeWindowSummaryLabel
 } from "../../timeWindow";
 import { useSession } from "../../session/SessionContext";
-import { useDismissOnOutsideClick } from "../../hooks/useDismissOnOutsideClick";
 import { fetchDashboardsFromServer, saveDashboardsToServer } from "../../dashboardServerSync";
 import { useDashboardRollback } from "../../dashboard/useDashboardRollback";
 import { useDashboardAutosave } from "../../dashboard/useDashboardAutosave";
@@ -66,6 +65,7 @@ import { DashboardEditorGrid } from "./DashboardEditorGrid";
 import { DashboardWidgetCard } from "./DashboardWidgetCard";
 import { DashboardWidgetConfigOverlay } from "./DashboardWidgetConfigOverlay";
 import { useDashboardBreakpointEffects } from "./useDashboardBreakpointEffects";
+import { useDashboardDismissals } from "./useDashboardDismissals";
 import { useDashboardInteractions } from "./useDashboardInteractions";
 import { useDashboardManagement } from "./useDashboardManagement";
 import { useDashboardRuntimeValues } from "./useDashboardRuntimeValues";
@@ -526,6 +526,44 @@ export default function DashboardApp() {
     startWidgetDrag,
     startWidgetResize
   } = interactions;
+  useDashboardDismissals({
+    userMenuOpen,
+    setUserMenuOpen,
+    userMenuRef: () => userMenuRef,
+    userMenuButtonRef: () => userMenuButtonRef,
+    timeWindowMenuOpen,
+    setTimeWindowMenuOpen,
+    setTimeWindowMenuView,
+    timeWindowMenuRef: () => timeWindowMenuRef,
+    timeWindowButtonRef: () => timeWindowButtonRef,
+    dashboardMenuOpen,
+    setDashboardMenuOpen,
+    dashboardMenuRef: () => dashboardMenuRef,
+    dashboardMenuButtonRef: () => dashboardMenuButtonRef,
+    widgetMenuOpen,
+    setWidgetMenuOpen,
+    widgetMenuRef: () => widgetMenuRef,
+    widgetMenuButtonRef: () => widgetMenuButtonRef,
+    visibilityMenuOpen,
+    setVisibilityMenuOpen,
+    visibilityMenuRef: () => visibilityMenuRef,
+    visibilityMenuButtonRef: () => visibilityMenuButtonRef,
+    breakpointMenuOpen,
+    setBreakpointMenuOpen,
+    breakpointMenuRef: () => breakpointMenuRef,
+    breakpointMenuButtonRef: () => breakpointMenuButtonRef,
+    rollbackMenuOpen: rollback.rollbackMenuOpen,
+    closeRollbackMenu: rollback.closeRollbackMenu,
+    rollbackMenuRef: () => rollbackMenuRef,
+    rollbackButtonRef: () => rollbackButtonRef,
+    dashboardSettingsOpen,
+    setDashboardSettingsOpen,
+    dashboardSettingsPanelRef: () => dashboardSettingsPanelRef,
+    dashboardSettingsButtonRef: () => dashboardSettingsButtonRef,
+    updateDashboardSettingsPlacement,
+    activeDashboardName,
+    setDashboardDeleteConfirmInput
+  });
   useDashboardBreakpointEffects({
     hasManualBreakpointSelection,
     gridViewportWidth,
@@ -644,90 +682,6 @@ export default function DashboardApp() {
   createEffect(() => {
     if (dashboardLocked()) return;
     setDashboardMenuOpen(false);
-  });
-
-  useDismissOnOutsideClick({
-    isOpen: userMenuOpen,
-    containerRef: () => userMenuRef,
-    triggerRef: () => userMenuButtonRef,
-    onDismiss: () => setUserMenuOpen(false)
-  });
-
-  useDismissOnOutsideClick({
-    isOpen: timeWindowMenuOpen,
-    containerRef: () => timeWindowMenuRef,
-    triggerRef: () => timeWindowButtonRef,
-    onDismiss: () => {
-      setTimeWindowMenuOpen(false);
-      setTimeWindowMenuView("list");
-    }
-  });
-
-  useDismissOnOutsideClick({
-    isOpen: dashboardMenuOpen,
-    containerRef: () => dashboardMenuRef,
-    triggerRef: () => dashboardMenuButtonRef,
-    onDismiss: () => setDashboardMenuOpen(false)
-  });
-
-  useDismissOnOutsideClick({
-    isOpen: widgetMenuOpen,
-    containerRef: () => widgetMenuRef,
-    triggerRef: () => widgetMenuButtonRef,
-    onDismiss: () => setWidgetMenuOpen(false)
-  });
-
-  useDismissOnOutsideClick({
-    isOpen: visibilityMenuOpen,
-    containerRef: () => visibilityMenuRef,
-    triggerRef: () => visibilityMenuButtonRef,
-    onDismiss: () => setVisibilityMenuOpen(false)
-  });
-
-  useDismissOnOutsideClick({
-    isOpen: breakpointMenuOpen,
-    containerRef: () => breakpointMenuRef,
-    triggerRef: () => breakpointMenuButtonRef,
-    onDismiss: () => setBreakpointMenuOpen(false)
-  });
-
-  useDismissOnOutsideClick({
-    isOpen: rollback.rollbackMenuOpen,
-    containerRef: () => rollbackMenuRef,
-    triggerRef: () => rollbackButtonRef,
-    onDismiss: rollback.closeRollbackMenu
-  });
-
-  createEffect(() => {
-    if (!dashboardSettingsOpen()) return;
-    const onEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setDashboardSettingsOpen(false);
-    };
-    const onPointerDownOutside = (event: PointerEvent) => {
-      const target = event.target as Node | null;
-      if (!target) return;
-      if (dashboardSettingsPanelRef?.contains(target)) return;
-      if (dashboardSettingsButtonRef?.contains(target)) return;
-      setDashboardSettingsOpen(false);
-    };
-    const onResizeOrScroll = () => updateDashboardSettingsPlacement();
-    window.addEventListener("keydown", onEscape);
-    window.addEventListener("pointerdown", onPointerDownOutside);
-    window.addEventListener("resize", onResizeOrScroll);
-    window.addEventListener("scroll", onResizeOrScroll, true);
-    queueMicrotask(updateDashboardSettingsPlacement);
-    onCleanup(() => {
-      window.removeEventListener("keydown", onEscape);
-      window.removeEventListener("pointerdown", onPointerDownOutside);
-      window.removeEventListener("resize", onResizeOrScroll);
-      window.removeEventListener("scroll", onResizeOrScroll, true);
-    });
-  });
-
-  createEffect(() => {
-    if (!dashboardSettingsOpen()) return;
-    activeDashboardName();
-    setDashboardDeleteConfirmInput("");
   });
 
   createEffect(() => {
