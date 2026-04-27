@@ -1,4 +1,4 @@
-import { cleanup, render } from "@solidjs/testing-library";
+import { cleanup, fireEvent, render, screen } from "@solidjs/testing-library";
 import { createSignal } from "solid-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useDashboardAutosave } from "./useDashboardAutosave";
@@ -79,6 +79,40 @@ describe("useDashboardAutosave", () => {
     vi.advanceTimersByTime(5000);
     expect(persistToStorage).toHaveBeenCalled();
     expect(saveToServer).not.toHaveBeenCalled();
+  });
+
+  it("cancels a pending save when auth becomes unavailable", async () => {
+    vi.useFakeTimers();
+    const persistToStorage = vi.fn();
+    const saveToServer = vi.fn();
+
+    render(() => (
+      <Harness persistToStorage={persistToStorage} saveToServer={saveToServer} ready authed delayMs={1200} />
+    ));
+
+    await fireEvent.click(screen.getByRole("button", { name: "change" }));
+    vi.advanceTimersByTime(600);
+    await fireEvent.click(screen.getByRole("button", { name: "unauth" }));
+    vi.advanceTimersByTime(2000);
+
+    expect(saveToServer).not.toHaveBeenCalled();
+  });
+
+  it("clears pending timer on cleanup (unmount)", async () => {
+    vi.useFakeTimers();
+    const persistToStorage = vi.fn();
+    const saveToServer = vi.fn();
+
+    const view = render(() => (
+      <Harness persistToStorage={persistToStorage} saveToServer={saveToServer} delayMs={1200} />
+    ));
+
+    await fireEvent.click(screen.getByRole("button", { name: "change" }));
+    vi.advanceTimersByTime(600);
+    view.unmount();
+    vi.advanceTimersByTime(5000);
+
+    expect(saveToServer).not.toHaveBeenCalledWith([{ id: "d2" }]);
   });
 });
 
