@@ -33,7 +33,7 @@ Most teams that need dashboard-heavy tooling end up assembling:
 ## Architecture docs
 
 - Frontend architecture: [`docs/FRONTEND_ARCHITECTURE.md`](docs/FRONTEND_ARCHITECTURE.md)
-- Backend architecture: _planned in a separate document_
+- Backend architecture: [`docs/BACKEND_ARCHITECTURE.md`](docs/BACKEND_ARCHITECTURE.md)
 
 ## Quick start
 
