@@ -3,6 +3,10 @@
 This document describes the backend architecture for `dafuq`.
 It focuses on the Go server runtime, auth, API gateway, and persistence behavior.
 
+## Related Architecture Docs
+
+- Frontend architecture: [`FRONTEND_ARCHITECTURE.md`](FRONTEND_ARCHITECTURE.md)
+
 ## Goals
 
 - Provide a single deployable backend that serves API endpoints and the built SPA.

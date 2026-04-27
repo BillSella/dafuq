@@ -3,6 +3,10 @@
 This document describes the frontend architecture for the `dafuq` application.
 It focuses on the SolidJS + TypeScript client only; backend architecture is intentionally excluded.
 
+## Related Architecture Docs
+
+- Backend architecture: [`BACKEND_ARCHITECTURE.md`](BACKEND_ARCHITECTURE.md)
+
 ## Goals
 
 - Keep app-level concerns separate from module-level implementation details.
