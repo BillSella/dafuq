@@ -1,5 +1,5 @@
 import { Show } from "solid-js";
-import App from "./App";
+import { App } from "./App";
 import { AuthLandingPage } from "./components/auth/AuthLandingPage";
 import { useSession } from "./session/SessionContext";
 

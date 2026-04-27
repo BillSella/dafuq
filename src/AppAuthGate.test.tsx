@@ -2,7 +2,7 @@ import { cleanup, render, screen } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./App", () => ({
-  default: () => <div>app-shell</div>
+  App: () => <div>app-shell</div>
 }));
 
 vi.mock("./components/auth/AuthLandingPage", () => ({
