@@ -6,6 +6,7 @@ import { SessionProvider, useSession } from "./SessionContext";
 afterEach(() => {
   cleanup();
   localStorage.clear();
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
@@ -22,6 +23,9 @@ function SessionProbe() {
       </button>
       <button type="button" onClick={() => session.logOut()}>
         logout
+      </button>
+      <button type="button" onClick={() => session.logIn()}>
+        login
       </button>
     </div>
   );
@@ -76,6 +80,19 @@ describe("SessionContext", () => {
     expect(localStorage.getItem("dashboard:index")).toBeNull();
     expect(localStorage.getItem("dashboard:d1.json")).toBeNull();
     expect(fetchSpy).toHaveBeenCalledWith("/api/auth/logout", { method: "POST" });
+  });
+
+  it("login redirects to backend auth entry", async () => {
+    const assignSpy = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign: assignSpy });
+    render(() => (
+      <SessionProvider>
+        <SessionProbe />
+      </SessionProvider>
+    ));
+
+    await fireEvent.click(screen.getByRole("button", { name: "login" }));
+    expect(assignSpy).toHaveBeenCalledWith("/api/auth/login");
   });
 });
 

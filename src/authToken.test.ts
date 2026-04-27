@@ -73,5 +73,27 @@ describe("authToken", () => {
     expect(getRefreshToken()).toBe("existing-r");
     expect(replaceSpy).not.toHaveBeenCalled();
   });
+
+  it("returns empty claims when token payload is malformed", () => {
+    localStorage.setItem("dafuq_access_token", "not-a-jwt");
+    expect(getAccessTokenClaims()).toEqual([]);
+  });
+
+  it("normalizes claim formats from scope and scp fields", () => {
+    const payload = window.btoa(
+      JSON.stringify({
+        scope: "module:settings:read module:settings:read",
+        scp: ["module:userSettings:read", "", 12],
+        roles: "role:viewer"
+      })
+    );
+    localStorage.setItem("dafuq_access_token", `header.${payload}.sig`);
+
+    expect(getAccessTokenClaims()).toEqual([
+      "module:settings:read",
+      "module:userSettings:read",
+      "role:viewer"
+    ]);
+  });
 });
 
