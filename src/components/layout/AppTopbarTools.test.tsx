@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppTopbarTools } from "./AppTopbarTools";
-import type { RelativePresetId, TimeWindowState } from "../../timeWindow";
+import type { RelativePresetId, TimeWindowState } from "../../modules/dashboard/timeWindow";
 
 const logOutSpy = vi.fn();
 

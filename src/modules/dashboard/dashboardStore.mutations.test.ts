@@ -86,12 +86,14 @@ function createDashboards(): DashboardDoc[] {
 describe("dashboardStore mutations", () => {
   it("creates dashboards with optional default widget", () => {
     const randomUuid = vi.spyOn(globalThis.crypto, "randomUUID");
-    randomUuid.mockReturnValueOnce("dashboard-id").mockReturnValueOnce("widget-id");
+    randomUuid
+      .mockReturnValueOnce("11111111-1111-1111-1111-111111111111")
+      .mockReturnValueOnce("22222222-2222-2222-2222-222222222222");
 
     const withWidget = createDashboardDoc("Ops", true, BREAKPOINTS);
-    expect(withWidget.id).toBe("dashboard-dashboard-id");
+    expect(withWidget.id).toBe("dashboard-11111111-1111-1111-1111-111111111111");
     expect(withWidget.widgets).toHaveLength(1);
-    expect(withWidget.widgets[0]!.id).toBe("widget-widget-id");
+    expect(withWidget.widgets[0]!.id).toBe("widget-22222222-2222-2222-2222-222222222222");
     expect(withWidget.widgets[0]!.placements).toHaveLength(BREAKPOINTS.length);
     expect(withWidget.widgets[0]!.display).toHaveLength(BREAKPOINTS.length);
 
@@ -171,8 +173,10 @@ describe("dashboardStore mutations", () => {
     );
 
     const widget = updated[0]!.widgets[0]!;
+    expect(widget.type).toBe("numberGauge");
+    const gaugeConfig = widget.config as import("../../widgets/gaugeWidget").GaugeConfig;
     expect(widget.config.apiEndpoint).toBe("https://example.com/new");
-    expect(widget.config.defaultValue).toBe("42");
+    expect(gaugeConfig.defaultValue).toBe("42");
     expect(widget.display[0]).toMatchObject({ breakpoint: "desktopFhd", label: "Renamed" });
   });
 

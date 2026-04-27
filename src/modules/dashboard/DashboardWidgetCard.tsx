@@ -46,6 +46,14 @@ export function DashboardWidgetCard(props: DashboardWidgetCardProps) {
   const isTime = () => widget().type === "timeSeriesChart";
   const isMap = () => widget().type === "mapNetwork";
   const runtimeStatus = () => props.runtimeWidgetStatus()[widget().id] ?? "fallback";
+  const widgetFontSize = createMemo(() => {
+    const configured = (widget().config as { fontSize?: unknown }).fontSize;
+    return props.fontSizeValue(
+      configured === "small" || configured === "medium" || configured === "large"
+        ? configured
+        : "medium"
+    );
+  });
   const donutProgress = createMemo(() => {
     if (!isDonut()) return 0;
     const donutState = widget() as WidgetStateByType<"donutChart">;
@@ -177,7 +185,7 @@ export function DashboardWidgetCard(props: DashboardWidgetCardProps) {
         width: `${Math.max(1, widget().colSpan * props.step() - props.widgetInset * 2)}px`,
         height: `${Math.max(1, widget().rowSpan * props.step() - props.widgetInset * 2)}px`,
         "--donut-size": `${Math.max(24, Math.min(Math.max(1, widget().colSpan * props.step() - props.widgetInset * 2), Math.max(1, widget().rowSpan * props.step() - props.widgetInset * 2)) - 16)}px`,
-        "font-size": props.fontSizeValue("fontSize" in widget().config && widget().config.fontSize ? widget().config.fontSize : "medium")
+        "font-size": widgetFontSize()
       }}
       onPointerDown={(event) => props.startWidgetDrag(event, widget())}
     >

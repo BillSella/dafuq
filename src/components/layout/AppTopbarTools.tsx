@@ -1,6 +1,6 @@
 import { For, Show, type JSX } from "solid-js";
 import { useSession } from "../../session/SessionContext";
-import type { RelativePresetId, TimeWindowState } from "../../timeWindow";
+import type { RelativePresetId, TimeWindowState } from "../../modules/dashboard/timeWindow";
 import type { AppModuleId } from "../../modules/moduleTypes";
 import { MenuDropdown } from "../ui/MenuDropdown";
 import { ToolButton } from "../ui/ToolButton";

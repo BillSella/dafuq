@@ -29,8 +29,9 @@ describe("widgetRegistry", () => {
 
   it("returns label widget runtime values based on source mode", () => {
     const labelStatic = widgetRegistry.label.createState("w-label", 1, 1);
+    expect(labelStatic.type).toBe("label");
     const staticValue = widgetRegistry.label.getDisplayValueWithRuntime(labelStatic, "runtime");
-    expect(staticValue).toBe(labelStatic.config.staticText);
+    expect(staticValue).toBe((labelStatic.config as import("./labelWidget").LabelConfig).staticText);
 
     const labelApi = {
       ...labelStatic,
