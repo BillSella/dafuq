@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -199,5 +200,90 @@ func TestNewOAuthState(t *testing.T) {
 	}
 	if len(s) < 40 {
 		t.Fatalf("state too short: %q", s)
+	}
+}
+
+func TestClearOAuthStateCookie(t *testing.T) {
+	h := NewHandler(config.Config{}, nil, stubValidator{})
+	rec := httptest.NewRecorder()
+	h.clearOAuthStateCookie(rec)
+	cookies := rec.Result().Cookies()
+	if len(cookies) == 0 || cookies[0].Name != oauthStateCookie || cookies[0].MaxAge != -1 {
+		t.Fatalf("expected oauth state cookie clear, got %#v", cookies)
+	}
+}
+
+func TestPostLoginRedirectURLWrapper(t *testing.T) {
+	h := NewHandler(config.Config{PostLoginRedirect: "/dashboards"}, nil, stubValidator{})
+	req := httptest.NewRequest(http.MethodGet, "https://example.com/api/auth/callback", nil)
+	u, err := h.postLoginRedirectURL(req)
+	if err != nil {
+		t.Fatalf("expected redirect url, got %v", err)
+	}
+	if u.Path != "/dashboards" {
+		t.Fatalf("unexpected path: %q", u.Path)
+	}
+}
+
+func TestPasswordValidationBranches(t *testing.T) {
+	h := NewHandler(config.Config{}, nil, stubValidator{})
+
+	getReq := httptest.NewRequest(http.MethodGet, "/api/auth/password", nil)
+	getRec := httptest.NewRecorder()
+	h.Password(getRec, getReq)
+	if getRec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected 405 for GET, got %d", getRec.Code)
+	}
+
+	badReq := httptest.NewRequest(http.MethodPost, "/api/auth/password", strings.NewReader("{"))
+	badRec := httptest.NewRecorder()
+	h.Password(badRec, badReq)
+	if badRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for bad json, got %d", badRec.Code)
+	}
+
+	missingReq := httptest.NewRequest(http.MethodPost, "/api/auth/password", strings.NewReader(`{"email":"x"}`))
+	missingRec := httptest.NewRecorder()
+	h.Password(missingRec, missingReq)
+	if missingRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for missing fields, got %d", missingRec.Code)
+	}
+}
+
+func TestRefreshValidationBranches(t *testing.T) {
+	h := NewHandler(config.Config{}, nil, stubValidator{})
+
+	getReq := httptest.NewRequest(http.MethodGet, "/api/auth/refresh", nil)
+	getRec := httptest.NewRecorder()
+	h.Refresh(getRec, getReq)
+	if getRec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected 405 for GET, got %d", getRec.Code)
+	}
+
+	badReq := httptest.NewRequest(http.MethodPost, "/api/auth/refresh", strings.NewReader("{"))
+	badRec := httptest.NewRecorder()
+	h.Refresh(badRec, badReq)
+	if badRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for invalid json, got %d", badRec.Code)
+	}
+
+	missingReq := httptest.NewRequest(http.MethodPost, "/api/auth/refresh", strings.NewReader(`{"organization_id":"org"}`))
+	missingRec := httptest.NewRecorder()
+	h.Refresh(missingRec, missingReq)
+	if missingRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for missing refresh token, got %d", missingRec.Code)
+	}
+}
+
+func TestCallbackErrorQueryBranch(t *testing.T) {
+	h := NewHandler(config.Config{}, nil, stubValidator{})
+	q := url.Values{}
+	q.Set("error", "access_denied")
+	q.Set("error_description", "denied")
+	req := httptest.NewRequest(http.MethodGet, "/api/auth/callback?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	h.Callback(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 on callback error query, got %d", rec.Code)
 	}
 }

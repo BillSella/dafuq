@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -8,6 +9,28 @@ import (
 	"github.com/dafuq-framework/dafuq/backend/internal/auth"
 	"github.com/dafuq-framework/dafuq/backend/internal/config"
 )
+
+func TestNewTokenValidatorInvalidDriver(t *testing.T) {
+	_, err := newTokenValidator(context.Background(), config.Config{}, config.AuthDriver("bad"), nil)
+	if err == nil {
+		t.Fatalf("expected error for invalid auth driver")
+	}
+}
+
+func TestNewTokenValidatorAllowDriver(t *testing.T) {
+	tv, err := newTokenValidator(
+		context.Background(),
+		config.Config{AllowJWTSecret: "secret", AllowSubject: "user"},
+		config.AuthAllowPlugin,
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("expected allow validator creation, got %v", err)
+	}
+	if tv == nil {
+		t.Fatalf("expected non-nil token validator")
+	}
+}
 
 func TestRegisterAuthRoutesErrorsWithoutHandler(t *testing.T) {
 	mux := http.NewServeMux()
