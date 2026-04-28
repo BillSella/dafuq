@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 
 	"github.com/MicahParks/keyfunc/v3"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/workos/workos-go/v4/pkg/usermanagement"
 )
 
 // DefaultWorkOSIssuer is the JWT iss claim for WorkOS access tokens.
@@ -27,8 +27,14 @@ type JWTValidator struct {
 	issuer   string
 }
 
+type workosJWKSClient interface {
+	GetJWKSURL(workosClientID string) (*url.URL, error)
+}
+
+var newKeyfuncFromURLs = keyfunc.NewDefaultCtx
+
 // NewJWTValidator builds a validator that refreshes JWKS from WorkOS (safe for multi-region APIs).
-func NewJWTValidator(ctx context.Context, apiClient *usermanagement.Client, workosClientID, issuer string) (*JWTValidator, error) {
+func NewJWTValidator(ctx context.Context, apiClient workosJWKSClient, workosClientID, issuer string) (*JWTValidator, error) {
 	if issuer == "" {
 		issuer = DefaultWorkOSIssuer
 	}
@@ -36,7 +42,7 @@ func NewJWTValidator(ctx context.Context, apiClient *usermanagement.Client, work
 	if err != nil {
 		return nil, err
 	}
-	kf, err := keyfunc.NewDefaultCtx(ctx, []string{u.String()})
+	kf, err := newKeyfuncFromURLs(ctx, []string{u.String()})
 	if err != nil {
 		return nil, err
 	}

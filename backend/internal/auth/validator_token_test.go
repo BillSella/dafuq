@@ -4,12 +4,26 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"net/url"
 	"testing"
 	"time"
 
 	"github.com/MicahParks/keyfunc/v3"
 	"github.com/golang-jwt/jwt/v5"
 )
+
+type fakeJWKSClient struct {
+	jwksURL string
+	err     error
+}
+
+func (f fakeJWKSClient) GetJWKSURL(string) (*url.URL, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return url.Parse(f.jwksURL)
+}
 
 func newHMACKeyfunc(t *testing.T, secret []byte, kid string) keyfunc.Keyfunc {
 	t.Helper()
@@ -73,6 +87,33 @@ func TestJWTValidatorValidateAndAccessClaims(t *testing.T) {
 	}
 	if ac.Subject != "user-1" || ac.ClientID != "cid-1" || ac.SID != "sid-1" {
 		t.Fatalf("unexpected access claims: %#v", ac)
+	}
+}
+
+func TestNewJWTValidatorConstructorBranches(t *testing.T) {
+	orig := newKeyfuncFromURLs
+	t.Cleanup(func() { newKeyfuncFromURLs = orig })
+
+	newKeyfuncFromURLs = func(context.Context, []string) (keyfunc.Keyfunc, error) {
+		return newHMACKeyfunc(t, []byte("secret"), "kid-1"), nil
+	}
+	v, err := NewJWTValidator(context.Background(), fakeJWKSClient{jwksURL: "https://issuer/.well-known/jwks.json"}, "cid-1", "")
+	if err != nil {
+		t.Fatalf("expected constructor success, got %v", err)
+	}
+	if v.issuer != DefaultWorkOSIssuer {
+		t.Fatalf("expected default issuer, got %q", v.issuer)
+	}
+
+	newKeyfuncFromURLs = func(context.Context, []string) (keyfunc.Keyfunc, error) {
+		return nil, errors.New("keyfunc failed")
+	}
+	if _, err := NewJWTValidator(context.Background(), fakeJWKSClient{jwksURL: "https://issuer/.well-known/jwks.json"}, "cid-1", "https://issuer"); err == nil {
+		t.Fatalf("expected keyfunc creation error")
+	}
+
+	if _, err := NewJWTValidator(context.Background(), fakeJWKSClient{err: errors.New("jwks client failed")}, "cid-1", "https://issuer"); err == nil {
+		t.Fatalf("expected jwks url fetch error")
 	}
 }
 

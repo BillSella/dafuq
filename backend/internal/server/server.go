@@ -15,6 +15,14 @@ import (
 	"github.com/workos/workos-go/v4/pkg/usermanagement"
 )
 
+var (
+	newWorkOSClientFn    = usermanagement.NewClient
+	newJWTValidatorFn    = auth.NewJWTValidator
+	newAllowValidatorFn  = auth.NewAllowValidator
+	newPAMValidatorFn    = auth.NewPAMValidator
+	newOIDCValidatorFn   = auth.NewOIDCValidator
+)
+
 // NewMux builds the application router: /api/* then static SPA.
 // Endpoints under /api/v1/ require Authorization: Bearer <access token> validated
 // by the pluggable token validator (WorkOS JWT, OIDC JWKS, etc. per config / gateway file).
@@ -120,17 +128,17 @@ func isPAMAuthRoute(r *APIProxyRoute) bool {
 func newTokenValidator(ctx context.Context, cfg config.Config, drv config.AuthDriver, outClient **usermanagement.Client) (auth.TokenValidator, error) {
 	switch drv {
 	case config.AuthWorkOSPlugin:
-		c := usermanagement.NewClient(cfg.WorkOSAPIKey)
+		c := newWorkOSClientFn(cfg.WorkOSAPIKey)
 		if outClient != nil {
 			*outClient = c
 		}
-		return auth.NewJWTValidator(ctx, c, cfg.WorkOSClientID, cfg.WorkOSJWTIssuer)
+		return newJWTValidatorFn(ctx, c, cfg.WorkOSClientID, cfg.WorkOSJWTIssuer)
 	case config.AuthAllowPlugin:
-		return auth.NewAllowValidator(cfg)
+		return newAllowValidatorFn(cfg)
 	case config.AuthPAMPlugin:
-		return auth.NewPAMValidator(cfg)
+		return newPAMValidatorFn(cfg)
 	case config.AuthProxyOrOIDC:
-		return auth.NewOIDCValidator(ctx, cfg.JWKSURL, cfg.JWTIssuer, cfg.JWTAudience)
+		return newOIDCValidatorFn(ctx, cfg.JWKSURL, cfg.JWTIssuer, cfg.JWTAudience)
 	default:
 		return nil, fmt.Errorf("invalid auth driver %q", drv)
 	}
