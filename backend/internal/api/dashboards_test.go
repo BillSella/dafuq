@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dafuq-framework/dafuq/backend/internal/auth"
 )
@@ -138,4 +139,148 @@ func TestDashboardDeleteRecoveryNameConflict(t *testing.T) {
 	if st, err := os.Stat(filepath.Join(base, "d2-1")); err != nil || !st.IsDir() {
 		t.Fatalf("expected prior deleted dir d2-1 to exist, err=%v", err)
 	}
+}
+
+func TestRegisterDashboardRoutes(t *testing.T) {
+	s := NewDashboardStore(t.TempDir(), "acme")
+	mux := http.NewServeMux()
+	RegisterDashboardRoutes(mux, s)
+	req := httptest.NewRequest(http.MethodGet, "/dashboards", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected routed unauthorized without claims, got %d", rec.Code)
+	}
+}
+
+func TestDashboardVersionsAndRollback(t *testing.T) {
+	dir := t.TempDir()
+	s := NewDashboardStore(dir, "acme")
+	sub := "bob"
+	ctx := auth.ContextWithAccessClaims(contextWithReq(t).Context(), &auth.AccessContextClaims{Subject: sub})
+
+	putReq := httptest.NewRequest(http.MethodPut, "/dashboards", strings.NewReader(
+		`{"version":1,"dashboards":[{"id":"d1","name":"Dashboard","widgets":[]}]}`,
+	)).WithContext(ctx)
+	putRec := httptest.NewRecorder()
+	s.handlePut(putRec, putReq)
+	if putRec.Code != http.StatusOK {
+		t.Fatalf("PUT: %d %s", putRec.Code, putRec.Body.String())
+	}
+
+	userDir, _ := s.userDirForSubject(sub)
+	dashDir := filepath.Join(userDir, "d1")
+	versions, err := listDashboardVersionFiles(dashDir)
+	if err != nil || len(versions) == 0 {
+		t.Fatalf("expected at least one version file, err=%v", err)
+	}
+	display, err := versionDisplayFromFileName(filepath.Base(versions[0]))
+	if err != nil {
+		t.Fatalf("display conversion failed: %v", err)
+	}
+
+	versionsReq := httptest.NewRequest(http.MethodGet, "/dashboards/d1/versions", nil).WithContext(ctx)
+	versionsReq.SetPathValue("dashboardId", "d1")
+	versionsRec := httptest.NewRecorder()
+	s.handleGetVersions(versionsRec, versionsReq)
+	if versionsRec.Code != http.StatusOK {
+		t.Fatalf("GET versions: %d %s", versionsRec.Code, versionsRec.Body.String())
+	}
+
+	rollbackReq := httptest.NewRequest(http.MethodPost, "/dashboards/d1/rollback", strings.NewReader(
+		`{"timestamp":"`+display+`"}`,
+	)).WithContext(ctx)
+	rollbackReq.SetPathValue("dashboardId", "d1")
+	rollbackRec := httptest.NewRecorder()
+	s.handleRollback(rollbackRec, rollbackReq)
+	if rollbackRec.Code != http.StatusOK {
+		t.Fatalf("rollback: %d %s", rollbackRec.Code, rollbackRec.Body.String())
+	}
+}
+
+func TestVersionNameDisplayRoundTrip(t *testing.T) {
+	now := time.Now()
+	file := versionFileName(now)
+	display, err := versionDisplayFromFileName(file)
+	if err != nil {
+		t.Fatalf("display parse failed: %v", err)
+	}
+	back, err := versionFileNameFromDisplay(display)
+	if err != nil {
+		t.Fatalf("reverse conversion failed: %v", err)
+	}
+	if back != file {
+		t.Fatalf("expected round trip to preserve file name, got %q != %q", back, file)
+	}
+}
+
+func TestVersionFileNameFromDisplayErrors(t *testing.T) {
+	if _, err := versionFileNameFromDisplay(" "); err == nil {
+		t.Fatalf("expected timestamp required error")
+	}
+	if _, err := versionFileNameFromDisplay("not-a-time"); err == nil {
+		t.Fatalf("expected invalid timestamp error")
+	}
+}
+
+func TestAtomicWriteAndNoOverwrite(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a", "b.json")
+	data := []byte(`{"x":1}`)
+	if err := atomicWriteFile(path, data); err != nil {
+		t.Fatalf("atomic write failed: %v", err)
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read back failed: %v", err)
+	}
+	if string(got) != string(data) {
+		t.Fatalf("unexpected content %q", string(got))
+	}
+	if err := writeFileNoOverwrite(path, []byte(`{"x":2}`)); err == nil {
+		t.Fatalf("expected os.O_EXCL overwrite attempt to fail")
+	}
+}
+
+func TestPruneDashboardVersions(t *testing.T) {
+	dir := t.TempDir()
+	dashDir := filepath.Join(dir, "d1")
+	if err := os.MkdirAll(dashDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"2026-01-01 00-00-03.json", "2026-01-01 00-00-02.json", "2026-01-01 00-00-01.json"} {
+		p := filepath.Join(dashDir, name)
+		if err := os.WriteFile(p, []byte(`{}`), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := pruneDashboardVersions(dashDir, 2); err != nil {
+		t.Fatalf("prune failed: %v", err)
+	}
+	files, err := listDashboardVersionFiles(dashDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 2 {
+		t.Fatalf("expected 2 files after prune, got %d", len(files))
+	}
+}
+
+func TestHandleRollbackVersionNotFound(t *testing.T) {
+	s := NewDashboardStore(t.TempDir(), "acme")
+	ctx := auth.ContextWithAccessClaims(contextWithReq(t).Context(), &auth.AccessContextClaims{Subject: "u"})
+	req := httptest.NewRequest(http.MethodPost, "/dashboards/missing/rollback", strings.NewReader(
+		`{"timestamp":"00:00:00 2026-01-01"}`,
+	)).WithContext(ctx)
+	req.SetPathValue("dashboardId", "missing")
+	rec := httptest.NewRecorder()
+	s.handleRollback(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 version not found, got %d", rec.Code)
+	}
+}
+
+func contextWithReq(t *testing.T) *http.Request {
+	t.Helper()
+	return httptest.NewRequest(http.MethodGet, "/", nil)
 }
