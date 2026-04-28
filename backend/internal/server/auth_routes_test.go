@@ -65,3 +65,22 @@ func TestRegisterAuthRoutesAllowWiresEndpoints(t *testing.T) {
 		t.Fatalf("expected allow login route to be wired, got %d", rec.Code)
 	}
 }
+
+func TestRegisterAuthRoutesRejectsInvalidCombinations(t *testing.T) {
+	mux := http.NewServeMux()
+	if err := registerAuthRoutes(
+		mux,
+		&APIProxyRoute{ListenPath: "/api/auth/", Plugin: "weird"},
+		nil, nil, nil, 1024,
+	); err == nil {
+		t.Fatalf("expected error for unknown auth mode with no backends")
+	}
+
+	if err := registerAuthRoutes(
+		mux,
+		&APIProxyRoute{ListenPath: "/api/auth/", Plugin: "allow", Backends: []string{"https://example.com"}},
+		nil, nil, nil, 1024,
+	); err == nil {
+		t.Fatalf("expected error for plugin and backends combination")
+	}
+}
