@@ -27,6 +27,56 @@ func (s stubValidator) ValidateAccessToken(context.Context, string) (*AccessCont
 	return s.claims, nil
 }
 
+type fakeWorkOSClient struct {
+	authURL                    *url.URL
+	authURLErr                 error
+	lastAuthURLOpts            *usermanagement.GetAuthorizationURLOpts
+	authCodeResp               usermanagement.AuthenticateResponse
+	authCodeErr                error
+	authPasswordResp           usermanagement.AuthenticateResponse
+	authPasswordErr            error
+	authRefreshResp            usermanagement.RefreshAuthenticationResponse
+	authRefreshErr             error
+	userResp                   usermanagement.User
+	userErr                    error
+}
+
+func (f *fakeWorkOSClient) GetAuthorizationURL(opts usermanagement.GetAuthorizationURLOpts) (*url.URL, error) {
+	f.lastAuthURLOpts = &opts
+	if f.authURLErr != nil {
+		return nil, f.authURLErr
+	}
+	return f.authURL, nil
+}
+
+func (f *fakeWorkOSClient) AuthenticateWithCode(context.Context, usermanagement.AuthenticateWithCodeOpts) (usermanagement.AuthenticateResponse, error) {
+	if f.authCodeErr != nil {
+		return usermanagement.AuthenticateResponse{}, f.authCodeErr
+	}
+	return f.authCodeResp, nil
+}
+
+func (f *fakeWorkOSClient) AuthenticateWithPassword(context.Context, usermanagement.AuthenticateWithPasswordOpts) (usermanagement.AuthenticateResponse, error) {
+	if f.authPasswordErr != nil {
+		return usermanagement.AuthenticateResponse{}, f.authPasswordErr
+	}
+	return f.authPasswordResp, nil
+}
+
+func (f *fakeWorkOSClient) AuthenticateWithRefreshToken(context.Context, usermanagement.AuthenticateWithRefreshTokenOpts) (usermanagement.RefreshAuthenticationResponse, error) {
+	if f.authRefreshErr != nil {
+		return usermanagement.RefreshAuthenticationResponse{}, f.authRefreshErr
+	}
+	return f.authRefreshResp, nil
+}
+
+func (f *fakeWorkOSClient) GetUser(context.Context, usermanagement.GetUserOpts) (usermanagement.User, error) {
+	if f.userErr != nil {
+		return usermanagement.User{}, f.userErr
+	}
+	return f.userResp, nil
+}
+
 func TestValidateOAuthState(t *testing.T) {
 	h := NewHandler(config.Config{}, nil, nil)
 	rr := httptest.NewRecorder()
@@ -285,5 +335,138 @@ func TestCallbackErrorQueryBranch(t *testing.T) {
 	h.Callback(rec, req)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 on callback error query, got %d", rec.Code)
+	}
+}
+
+func TestWorkOSLoginAndCallbackAndPasswordAndRefresh(t *testing.T) {
+	fakeURL, _ := url.Parse("https://auth.example.com/start")
+	client := &fakeWorkOSClient{
+		authURL: fakeURL,
+		authCodeResp: usermanagement.AuthenticateResponse{
+			AccessToken:          "access",
+			RefreshToken:         "refresh",
+			AuthenticationMethod: "password",
+		},
+		authPasswordResp: usermanagement.AuthenticateResponse{
+			AccessToken:  "p-access",
+			RefreshToken: "p-refresh",
+		},
+		authRefreshResp: usermanagement.RefreshAuthenticationResponse{
+			AccessToken:  "r-access",
+			RefreshToken: "r-refresh",
+		},
+	}
+	h := NewHandlerWithClient(config.Config{WorkOSClientID: "client", AuthRedirectURI: "https://app/cb", PostLoginRedirect: "/"}, client, stubValidator{})
+
+	loginReq := httptest.NewRequest(http.MethodGet, "/api/auth/login?screen=sign-in", nil)
+	loginRec := httptest.NewRecorder()
+	h.Login(loginRec, loginReq)
+	if loginRec.Code != http.StatusFound {
+		t.Fatalf("expected login redirect, got %d", loginRec.Code)
+	}
+	if client.lastAuthURLOpts == nil || client.lastAuthURLOpts.ScreenHint != usermanagement.SignIn {
+		t.Fatalf("expected sign-in screen hint to be passed")
+	}
+
+	cbReq := httptest.NewRequest(http.MethodGet, "/api/auth/callback?code=abc&state=s1", nil)
+	cbReq.Header.Set("Accept", "application/json")
+	cbReq.AddCookie(&http.Cookie{Name: oauthStateCookie, Value: "s1"})
+	cbRec := httptest.NewRecorder()
+	h.Callback(cbRec, cbReq)
+	if cbRec.Code != http.StatusOK {
+		t.Fatalf("expected callback json success, got %d", cbRec.Code)
+	}
+
+	pwReq := httptest.NewRequest(http.MethodPost, "/api/auth/password", strings.NewReader(`{"email":"u@example.com","password":"pw"}`))
+	pwRec := httptest.NewRecorder()
+	h.Password(pwRec, pwReq)
+	if pwRec.Code != http.StatusOK {
+		t.Fatalf("expected password success, got %d", pwRec.Code)
+	}
+
+	refReq := httptest.NewRequest(http.MethodPost, "/api/auth/refresh", strings.NewReader(`{"refresh_token":"t"}`))
+	refRec := httptest.NewRecorder()
+	h.Refresh(refRec, refReq)
+	if refRec.Code != http.StatusOK {
+		t.Fatalf("expected refresh success, got %d", refRec.Code)
+	}
+}
+
+func TestWorkOSClientErrorBranches(t *testing.T) {
+	baseCfg := config.Config{WorkOSClientID: "client", AuthRedirectURI: "https://app/cb"}
+
+	loginErr := NewHandlerWithClient(baseCfg, &fakeWorkOSClient{authURLErr: errors.New("boom")}, stubValidator{})
+	loginReq := httptest.NewRequest(http.MethodGet, "/api/auth/login", nil)
+	loginRec := httptest.NewRecorder()
+	loginErr.Login(loginRec, loginReq)
+	if loginRec.Code != http.StatusInternalServerError {
+		t.Fatalf("expected login 500 on auth url error, got %d", loginRec.Code)
+	}
+
+	cbErr := NewHandlerWithClient(baseCfg, &fakeWorkOSClient{authCodeErr: errors.New("boom")}, stubValidator{})
+	cbReq := httptest.NewRequest(http.MethodGet, "/api/auth/callback?code=abc&state=s1", nil)
+	cbReq.AddCookie(&http.Cookie{Name: oauthStateCookie, Value: "s1"})
+	cbRec := httptest.NewRecorder()
+	cbErr.Callback(cbRec, cbReq)
+	if cbRec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected callback auth failure 401, got %d", cbRec.Code)
+	}
+
+	pwErr := NewHandlerWithClient(baseCfg, &fakeWorkOSClient{authPasswordErr: errors.New("bad")}, stubValidator{})
+	pwReq := httptest.NewRequest(http.MethodPost, "/api/auth/password", strings.NewReader(`{"email":"u@example.com","password":"pw"}`))
+	pwRec := httptest.NewRecorder()
+	pwErr.Password(pwRec, pwReq)
+	if pwRec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected password 401 on provider error, got %d", pwRec.Code)
+	}
+
+	refErr := NewHandlerWithClient(baseCfg, &fakeWorkOSClient{authRefreshErr: errors.New("bad")}, stubValidator{})
+	refReq := httptest.NewRequest(http.MethodPost, "/api/auth/refresh", strings.NewReader(`{"refresh_token":"t"}`))
+	refRec := httptest.NewRecorder()
+	refErr.Refresh(refRec, refReq)
+	if refRec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected refresh 401 on provider error, got %d", refRec.Code)
+	}
+}
+
+func TestWorkOSMissingClientBranches(t *testing.T) {
+	h := NewHandlerWithClient(config.Config{}, nil, stubValidator{})
+	loginReq := httptest.NewRequest(http.MethodGet, "/api/auth/login", nil)
+	loginRec := httptest.NewRecorder()
+	h.Login(loginRec, loginReq)
+	if loginRec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 without auth client on login, got %d", loginRec.Code)
+	}
+
+	cbReq := httptest.NewRequest(http.MethodGet, "/api/auth/callback?code=x", nil)
+	cbReq.URL.RawQuery = "code=x&state=s1"
+	cbReq.AddCookie(&http.Cookie{Name: oauthStateCookie, Value: "s1"})
+	cbRec := httptest.NewRecorder()
+	h.Callback(cbRec, cbReq)
+	if cbRec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 without auth client on callback, got %d", cbRec.Code)
+	}
+}
+
+func TestMeWithWorkOSClientBranches(t *testing.T) {
+	validator := stubValidator{claims: &AccessContextClaims{Subject: "user-1"}}
+	failClient := &fakeWorkOSClient{userErr: errors.New("not found")}
+	hFail := NewHandlerWithClient(config.Config{}, failClient, validator)
+	failReq := httptest.NewRequest(http.MethodGet, "/api/auth/me", nil)
+	failReq.Header.Set("Authorization", "Bearer t")
+	failRec := httptest.NewRecorder()
+	hFail.Me(failRec, failReq)
+	if failRec.Code != http.StatusBadGateway {
+		t.Fatalf("expected me profile lookup failure 502, got %d", failRec.Code)
+	}
+
+	okClient := &fakeWorkOSClient{userResp: usermanagement.User{ID: "user-1"}}
+	hOk := NewHandlerWithClient(config.Config{}, okClient, validator)
+	okReq := httptest.NewRequest(http.MethodGet, "/api/auth/me", nil)
+	okReq.Header.Set("Authorization", "Bearer t")
+	okRec := httptest.NewRecorder()
+	hOk.Me(okRec, okReq)
+	if okRec.Code != http.StatusOK {
+		t.Fatalf("expected me success 200, got %d", okRec.Code)
 	}
 }

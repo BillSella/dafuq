@@ -28,13 +28,49 @@ const passwordRateLimit = 10
 // Handler wires WorkOS User Management (AuthKit), JWT access tokens, and refresh.
 type Handler struct {
 	cfg       config.Config
-	client    *usermanagement.Client
+	client    workosAuthClient
 	validator TokenValidator
 	limiterMu sync.Mutex
 	attempts  map[string][]time.Time
 }
 
+type workosAuthClient interface {
+	GetAuthorizationURL(opts usermanagement.GetAuthorizationURLOpts) (*url.URL, error)
+	AuthenticateWithCode(ctx context.Context, opts usermanagement.AuthenticateWithCodeOpts) (usermanagement.AuthenticateResponse, error)
+	AuthenticateWithPassword(ctx context.Context, opts usermanagement.AuthenticateWithPasswordOpts) (usermanagement.AuthenticateResponse, error)
+	AuthenticateWithRefreshToken(ctx context.Context, opts usermanagement.AuthenticateWithRefreshTokenOpts) (usermanagement.RefreshAuthenticationResponse, error)
+	GetUser(ctx context.Context, opts usermanagement.GetUserOpts) (usermanagement.User, error)
+}
+
+type workosClientAdapter struct {
+	client *usermanagement.Client
+}
+
+func (a *workosClientAdapter) GetAuthorizationURL(opts usermanagement.GetAuthorizationURLOpts) (*url.URL, error) {
+	return a.client.GetAuthorizationURL(opts)
+}
+func (a *workosClientAdapter) AuthenticateWithCode(ctx context.Context, opts usermanagement.AuthenticateWithCodeOpts) (usermanagement.AuthenticateResponse, error) {
+	return a.client.AuthenticateWithCode(ctx, opts)
+}
+func (a *workosClientAdapter) AuthenticateWithPassword(ctx context.Context, opts usermanagement.AuthenticateWithPasswordOpts) (usermanagement.AuthenticateResponse, error) {
+	return a.client.AuthenticateWithPassword(ctx, opts)
+}
+func (a *workosClientAdapter) AuthenticateWithRefreshToken(ctx context.Context, opts usermanagement.AuthenticateWithRefreshTokenOpts) (usermanagement.RefreshAuthenticationResponse, error) {
+	return a.client.AuthenticateWithRefreshToken(ctx, opts)
+}
+func (a *workosClientAdapter) GetUser(ctx context.Context, opts usermanagement.GetUserOpts) (usermanagement.User, error) {
+	return a.client.GetUser(ctx, opts)
+}
+
 func NewHandler(cfg config.Config, client *usermanagement.Client, v TokenValidator) *Handler {
+	var wc workosAuthClient
+	if client != nil {
+		wc = &workosClientAdapter{client: client}
+	}
+	return NewHandlerWithClient(cfg, wc, v)
+}
+
+func NewHandlerWithClient(cfg config.Config, client workosAuthClient, v TokenValidator) *Handler {
 	return &Handler{
 		cfg:       cfg,
 		client:    client,
@@ -70,6 +106,10 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 
 // Login redirects the browser to WorkOS AuthKit (built-in user management).
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	if h.client == nil {
+		http.Error(w, "auth client unavailable", http.StatusServiceUnavailable)
+		return
+	}
 	state, err := newOAuthState()
 	if err != nil {
 		http.Error(w, "failed to generate oauth state", http.StatusInternalServerError)
@@ -116,6 +156,10 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := h.validateOAuthState(r); err != nil {
 		http.Error(w, "invalid oauth state", http.StatusBadRequest)
+		return
+	}
+	if h.client == nil {
+		http.Error(w, "auth client unavailable", http.StatusServiceUnavailable)
 		return
 	}
 	h.clearOAuthStateCookie(w)
@@ -185,6 +229,10 @@ func (h *Handler) Password(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "email and password required", http.StatusBadRequest)
 		return
 	}
+	if h.client == nil {
+		http.Error(w, "auth client unavailable", http.StatusServiceUnavailable)
+		return
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
 	defer cancel()
 	resp, err := h.client.AuthenticateWithPassword(ctx, usermanagement.AuthenticateWithPasswordOpts{
@@ -221,6 +269,10 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	body.RefreshToken = strings.TrimSpace(body.RefreshToken)
 	if body.RefreshToken == "" {
 		http.Error(w, "refresh_token required", http.StatusBadRequest)
+		return
+	}
+	if h.client == nil {
+		http.Error(w, "auth client unavailable", http.StatusServiceUnavailable)
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
