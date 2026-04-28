@@ -280,6 +280,134 @@ func TestHandleRollbackVersionNotFound(t *testing.T) {
 	}
 }
 
+func TestDashboardHandlersUnauthorized(t *testing.T) {
+	s := NewDashboardStore(t.TempDir(), "acme")
+
+	getReq := httptest.NewRequest(http.MethodGet, "/dashboards", nil)
+	getRec := httptest.NewRecorder()
+	s.handleGet(getRec, getReq)
+	if getRec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected GET unauthorized, got %d", getRec.Code)
+	}
+
+	putReq := httptest.NewRequest(http.MethodPut, "/dashboards", strings.NewReader(`{"version":1,"dashboards":[]}`))
+	putRec := httptest.NewRecorder()
+	s.handlePut(putRec, putReq)
+	if putRec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected PUT unauthorized, got %d", putRec.Code)
+	}
+
+	vReq := httptest.NewRequest(http.MethodGet, "/dashboards/d1/versions", nil)
+	vReq.SetPathValue("dashboardId", "d1")
+	vRec := httptest.NewRecorder()
+	s.handleGetVersions(vRec, vReq)
+	if vRec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected versions unauthorized, got %d", vRec.Code)
+	}
+
+	rReq := httptest.NewRequest(http.MethodPost, "/dashboards/d1/rollback", strings.NewReader(`{"timestamp":"00:00:00 2026-01-01"}`))
+	rReq.SetPathValue("dashboardId", "d1")
+	rRec := httptest.NewRecorder()
+	s.handleRollback(rRec, rReq)
+	if rRec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected rollback unauthorized, got %d", rRec.Code)
+	}
+}
+
+func TestDashboardPutValidationFailures(t *testing.T) {
+	s := NewDashboardStore(t.TempDir(), "acme")
+	ctx := auth.ContextWithAccessClaims(contextWithReq(t).Context(), &auth.AccessContextClaims{Subject: "alice"})
+
+	badJSONReq := httptest.NewRequest(http.MethodPut, "/dashboards", strings.NewReader("{")).WithContext(ctx)
+	badJSONRec := httptest.NewRecorder()
+	s.handlePut(badJSONRec, badJSONReq)
+	if badJSONRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected bad json 400, got %d", badJSONRec.Code)
+	}
+
+	missingDashReq := httptest.NewRequest(http.MethodPut, "/dashboards", strings.NewReader(`{"version":1}`)).WithContext(ctx)
+	missingDashRec := httptest.NewRecorder()
+	s.handlePut(missingDashRec, missingDashReq)
+	if missingDashRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected missing dashboards 400, got %d", missingDashRec.Code)
+	}
+
+	notArrayReq := httptest.NewRequest(http.MethodPut, "/dashboards", strings.NewReader(`{"version":1,"dashboards":{"id":"x"}}`)).WithContext(ctx)
+	notArrayRec := httptest.NewRecorder()
+	s.handlePut(notArrayRec, notArrayReq)
+	if notArrayRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected dashboards array 400, got %d", notArrayRec.Code)
+	}
+
+	duplicateIDReq := httptest.NewRequest(http.MethodPut, "/dashboards", strings.NewReader(
+		`{"version":1,"dashboards":[{"id":"d1","name":"A","widgets":[]},{"id":"d1","name":"B","widgets":[]}]}`,
+	)).WithContext(ctx)
+	duplicateIDRec := httptest.NewRecorder()
+	s.handlePut(duplicateIDRec, duplicateIDReq)
+	if duplicateIDRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected duplicate id 400, got %d", duplicateIDRec.Code)
+	}
+}
+
+func TestDashboardVersionsAndRollbackValidationFailures(t *testing.T) {
+	s := NewDashboardStore(t.TempDir(), "acme")
+	ctx := auth.ContextWithAccessClaims(contextWithReq(t).Context(), &auth.AccessContextClaims{Subject: "alice"})
+
+	missingIDReq := httptest.NewRequest(http.MethodGet, "/dashboards//versions", nil).WithContext(ctx)
+	missingIDReq.SetPathValue("dashboardId", "")
+	missingIDRec := httptest.NewRecorder()
+	s.handleGetVersions(missingIDRec, missingIDReq)
+	if missingIDRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected versions missing id 400, got %d", missingIDRec.Code)
+	}
+
+	rollbackMissingIDReq := httptest.NewRequest(http.MethodPost, "/dashboards//rollback", strings.NewReader(`{"timestamp":"x"}`)).WithContext(ctx)
+	rollbackMissingIDReq.SetPathValue("dashboardId", "")
+	rollbackMissingIDRec := httptest.NewRecorder()
+	s.handleRollback(rollbackMissingIDRec, rollbackMissingIDReq)
+	if rollbackMissingIDRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected rollback missing id 400, got %d", rollbackMissingIDRec.Code)
+	}
+
+	badJSONReq := httptest.NewRequest(http.MethodPost, "/dashboards/d1/rollback", strings.NewReader("{")).WithContext(ctx)
+	badJSONReq.SetPathValue("dashboardId", "d1")
+	badJSONRec := httptest.NewRecorder()
+	s.handleRollback(badJSONRec, badJSONReq)
+	if badJSONRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected rollback invalid json 400, got %d", badJSONRec.Code)
+	}
+
+	extraJSONReq := httptest.NewRequest(http.MethodPost, "/dashboards/d1/rollback", strings.NewReader(`{"timestamp":"00:00:00 2026-01-01"}{"x":1}`)).WithContext(ctx)
+	extraJSONReq.SetPathValue("dashboardId", "d1")
+	extraJSONRec := httptest.NewRecorder()
+	s.handleRollback(extraJSONRec, extraJSONReq)
+	if extraJSONRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected rollback extra json 400, got %d", extraJSONRec.Code)
+	}
+
+	invalidTSReq := httptest.NewRequest(http.MethodPost, "/dashboards/d1/rollback", strings.NewReader(`{"timestamp":"bad-ts"}`)).WithContext(ctx)
+	invalidTSReq.SetPathValue("dashboardId", "d1")
+	invalidTSRec := httptest.NewRecorder()
+	s.handleRollback(invalidTSRec, invalidTSReq)
+	if invalidTSRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected rollback invalid timestamp 400, got %d", invalidTSRec.Code)
+	}
+}
+
+func TestValidateDashboardItemFailures(t *testing.T) {
+	cases := []map[string]any{
+		{"name": "N", "widgets": []any{}},           // missing id
+		{"id": "", "name": "N", "widgets": []any{}}, // invalid id
+		{"id": "d1", "widgets": []any{}},            // missing name
+		{"id": "d1", "name": "N"},                   // missing widgets
+	}
+	for i, item := range cases {
+		if err := validateDashboardItem(item, i); err == nil {
+			t.Fatalf("expected validation error for case %d", i)
+		}
+	}
+}
+
 func contextWithReq(t *testing.T) *http.Request {
 	t.Helper()
 	return httptest.NewRequest(http.MethodGet, "/", nil)
