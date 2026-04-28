@@ -75,3 +75,37 @@ func TestNewMuxAllowAuthLocalFlow(t *testing.T) {
 	}
 }
 
+func TestNewMuxAllowAuthRequiresInsecureFlag(t *testing.T) {
+	tmp := t.TempDir()
+	staticDir := filepath.Join(tmp, "dist")
+	if err := os.MkdirAll(staticDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(staticDir, "index.html"), []byte("<html>ok</html>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfgPath := filepath.Join(tmp, "routes.json")
+	cfgJSON := `{
+  "auth": {
+    "listen": "/api/auth",
+    "plugin": { "local": "allow" }
+  },
+  "routes": []
+}`
+	if err := os.WriteFile(cfgPath, []byte(cfgJSON), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := config.Config{
+		StaticDir:          staticDir,
+		DashboardDataDir:   filepath.Join(tmp, "dashboards"),
+		OrganizationID:     "acme",
+		APIProxyConfigFile: cfgPath,
+		AllowInsecureAuth:  false,
+		AllowJWTSecret:     "test-secret",
+	}
+	if _, err := NewMux(cfg); err == nil {
+		t.Fatalf("expected NewMux error when allow auth used without insecure flag")
+	}
+}
+
